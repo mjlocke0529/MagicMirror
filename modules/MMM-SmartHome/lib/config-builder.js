@@ -11,7 +11,7 @@ const POSITIONS = ["top_bar", "top_left", "top_center", "top_right", "upper_thir
 const DEFAULTS = {
 	version: 1,
 	adminPin: "1234",
-	general: { language: "en", locale: "en-US", timeFormat: 12, units: "imperial" },
+	general: { language: "en", locale: "en-US", timeFormat: 12, units: "imperial", adminLock: false },
 	weather: { label: "Gig Harbor, WA", lat: 47.3295, lon: -122.5801 },
 	hero: { tmdbApiKey: "", types: ["movie", "tv"], interval: 10000, region: "US" },
 	apps: [

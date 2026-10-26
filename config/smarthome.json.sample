@@ -1,10 +1,130 @@
 {
   "version": 1,
   "adminPin": "1234",
-  "general": { "language": "en", "locale": "en-US", "timeFormat": 12, "units": "imperial" },
-  "weather": { "label": "Tacoma, WA", "lat": 47.25288, "lon": -122.44429 },
+  "general": {
+    "language": "en",
+    "locale": "en-US",
+    "timeFormat": 12,
+    "units": "imperial",
+    "adminLock": false
+  },
+  "weather": {
+    "label": "Tacoma, WA",
+    "lat": 47.25288,
+    "lon": -122.44429
+  },
+  "hero": {
+    "tmdbApiKey": "",
+    "types": [
+      "movie",
+      "tv"
+    ],
+    "interval": 10000,
+    "region": "US"
+  },
   "apps": [
-    { "name": "Netflix", "url": "https://www.netflix.com/browse", "color": "#e50914", "hidden": false, "locked": false },
-    { "name": "Disney+", "url": "https://www.disneyplus.com/home", "color": "#0f3fa3", "hidden": false, "locked": false }
+    {
+      "name": "Netflix",
+      "url": "https://www.netflix.com/browse",
+      "color": "#e50914",
+      "hidden": false,
+      "locked": false
+    },
+    {
+      "name": "Disney+",
+      "url": "https://www.disneyplus.com/home",
+      "color": "#0f3fa3",
+      "hidden": false,
+      "locked": false
+    }
+  ],
+  "modules": [
+    {
+      "id": "apps",
+      "name": "Apps",
+      "module": "MMM-SmartHomeApps",
+      "position": "middle_center",
+      "enabled": true
+    },
+    {
+      "id": "clock",
+      "name": "Clock",
+      "module": "clock",
+      "position": "bottom_left",
+      "enabled": true
+    },
+    {
+      "id": "calendar",
+      "name": "Calendar",
+      "module": "calendar",
+      "position": "top_left",
+      "enabled": false,
+      "header": "US Holidays",
+      "config": {
+        "calendars": [
+          {
+            "fetchInterval": 604800000,
+            "symbol": "calendar-check",
+            "url": "https://ics.calendarlabs.com/76/mm3137/US_Holidays.ics"
+          }
+        ]
+      }
+    },
+    {
+      "id": "weather-current",
+      "name": "Weather (current)",
+      "module": "weather",
+      "position": "top_right",
+      "enabled": true,
+      "config": {
+        "weatherProvider": "openmeteo",
+        "type": "current"
+      }
+    },
+    {
+      "id": "weather-forecast",
+      "name": "Weather (forecast)",
+      "module": "weather",
+      "position": "top_right",
+      "enabled": false,
+      "header": "Weather Forecast",
+      "config": {
+        "weatherProvider": "openmeteo",
+        "type": "forecast"
+      }
+    },
+    {
+      "id": "news",
+      "name": "News",
+      "module": "newsfeed",
+      "position": "bottom_bar",
+      "enabled": false,
+      "config": {
+        "feeds": [
+          {
+            "title": "New York Times",
+            "url": "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
+          }
+        ],
+        "showSourceTitle": true,
+        "showPublishDate": true,
+        "broadcastNewsFeeds": true,
+        "broadcastNewsUpdates": true
+      }
+    },
+    {
+      "id": "compliments",
+      "name": "Compliments",
+      "module": "compliments",
+      "position": "lower_third",
+      "enabled": false
+    },
+    {
+      "id": "hero",
+      "name": "Trending (hero)",
+      "module": "MMM-SmartHomeHero",
+      "position": "upper_third",
+      "enabled": true
+    }
   ]
 }

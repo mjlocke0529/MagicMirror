@@ -40,6 +40,7 @@ Module.register("MMM-SmartHome", {
 			if (this.state) this.sendNotification("SH_STATE", this.state);
 		} else if (notification === "SH_REQUEST_PIN" && sender) {
 			// another module wants the PIN entered (e.g. a locked app)
+			if (!this.lockEnabled()) return this.sendNotification("SH_PIN_GRANTED", { token: payload.token });
 			this.askPin(payload.title || "PIN required", () => this.sendNotification("SH_PIN_GRANTED", { token: payload.token }));
 		} else if (notification === "SH_FOCUS_COG") {
 			this.showCog();
@@ -117,8 +118,13 @@ Module.register("MMM-SmartHome", {
 
 	/* ---------- settings flow ---------- */
 
+	lockEnabled () {
+		return !!(this.state && this.state.general && this.state.general.adminLock === true);
+	},
+
 	openSettings () {
 		if (this.panel) return;
+		if (!this.lockEnabled()) return this.openPanel();
 		this.askPin("Admin PIN", () => this.openPanel());
 	},
 
@@ -405,6 +411,14 @@ Module.register("MMM-SmartHome", {
 	},
 
 	sectionSystem (body) {
+		const general = { ...this.state.general };
+		body.appendChild(this.row("Admin lock (PIN)", this.toggle(general.adminLock === true, (v) => {
+			general.adminLock = v;
+			this.save({ general });
+			this.toast(v ? "PIN now required for settings and locked apps" : "Admin lock off - no PIN needed");
+		})));
+		body.appendChild(this.note(general.adminLock ? "Settings and locked apps require the PIN." : "Admin lock is off: settings open without a PIN and locked apps open freely. Turn it on when the kids find the cog."));
+
 		const current = this.input("Current PIN", "password");
 		const next = this.input("New PIN (4-8 digits)", "password");
 		const change = this.button("Change PIN", () => {

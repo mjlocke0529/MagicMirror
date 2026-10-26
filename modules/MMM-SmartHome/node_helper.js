@@ -20,6 +20,7 @@ module.exports = NodeHelper.create({
 
 	checkPin (pin) {
 		const data = this.load();
+		if (!data.general || data.general.adminLock !== true) return true; // admin lock off: no PIN needed
 		return typeof pin === "string" && pin.length > 0 && pin === String(data.adminPin);
 	},
 
@@ -54,12 +55,16 @@ module.exports = NodeHelper.create({
 				this.setWeather(payload.query);
 				break;
 
-			case "SH_CHANGE_PIN":
-				if (!this.checkPin(payload.pin)) return this.sendSocketNotification("SH_TOAST", { ok: false, message: "Current PIN is wrong" });
+			case "SH_CHANGE_PIN": {
+				const current = this.load();
+				if (current.general && current.general.adminLock === true && payload.pin !== String(current.adminPin)) {
+					return this.sendSocketNotification("SH_TOAST", { ok: false, message: "Current PIN is wrong" });
+				}
 				if (!/^\d{4,8}$/.test(payload.newPin)) return this.sendSocketNotification("SH_TOAST", { ok: false, message: "PIN must be 4-8 digits" });
 				this.save({ ...this.load(), adminPin: payload.newPin });
 				this.sendSocketNotification("SH_TOAST", { ok: true, message: "PIN changed" });
 				break;
+			}
 
 			case "SH_RELAUNCH":
 				if (!this.checkPin(payload.pin)) return;
