@@ -1,6 +1,102 @@
-/* ---------- shell ---------- */
+/* ======================================================================
+ * MMM-SmartHome - shell styles: grid, chrome, PIN, panel, themes, edit mode
+ * ====================================================================== */
+
+:root { --sh-accent: #ffffff; --sh-gap: 18px; --sh-radius: 18px; }
 
 .sh-root { display: none; }
+
+/* MagicMirror's own regions are not used: every module lives in the shell grid */
+body > .region { display: none !important; }
+.sh-parking { display: none !important; }
+
+/* ---------- grid ---------- */
+
+.sh-grid {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--sh-gap);
+	min-height: 0;
+}
+
+.sh-row {
+	display: flex;
+	gap: var(--sh-gap);
+	min-height: 0;
+	min-width: 0;
+}
+
+.sh-row-topbar, .sh-row-bottom { flex: 0 0 auto; }
+
+.sh-slot {
+	position: relative;
+	display: flex;
+	min-width: 0;
+	min-height: 0;
+	container-type: inline-size;
+	border-radius: var(--sh-radius);
+}
+
+.sh-slot > .module {
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	overflow: hidden;
+}
+
+.sh-slot > .module > .module-content { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+
+/* let our own modules fill their slot */
+.sh-slot .sh-hero { height: 100%; min-height: 0; flex: 1; }
+.sh-slot > .module.sh-apps > .module-content { justify-content: center; }
+.sh-slot > .module.sh-news > .module-content { justify-content: center; }
+.sh-slot > .module.sh-compliments > .module-content { justify-content: center; }
+
+.sh-slot-empty {
+	flex: 1;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	color: rgba(255, 255, 255, 0.3);
+	font-size: 18px;
+}
+
+/* compact hero in a narrow slot */
+@container (max-width: 760px) {
+	.sh-hero-title { font-size: 28px; }
+	.sh-hero-overview { display: none; }
+	.sh-hero-meta { right: 10%; left: 24px; bottom: 22px; }
+	.sh-hero-chip { font-size: 12px; }
+}
+
+/* ---------- edit mode (Layout tab open) ---------- */
+
+body.sh-layout-edit .sh-slot { outline: 2px dashed rgba(255, 255, 255, 0.35); outline-offset: -2px; }
+body.sh-layout-edit .sh-slot.sh-drop { outline: 3px dashed var(--sh-accent); background: rgba(255, 255, 255, 0.06); }
+body.sh-layout-edit .sh-slot::after {
+	content: attr(data-tag);
+	position: absolute;
+	top: 8px;
+	left: 10px;
+	z-index: 3;
+	font-size: 12px;
+	letter-spacing: 0.04em;
+	color: rgba(255, 255, 255, 0.7);
+	background: rgba(0, 0, 0, 0.6);
+	padding: 2px 8px;
+	border-radius: 6px;
+	pointer-events: none;
+}
+body.sh-layout-edit .sh-slot-empty { display: flex; }
+body.sh-layout-edit .sh-slot > .module { cursor: grab; }
+body.sh-layout-edit .sh-slot > .module:active { cursor: grabbing; }
+
+/* ---------- cog + toast ---------- */
 
 .sh-cog {
 	position: fixed;
@@ -19,17 +115,8 @@
 	opacity: 0;
 	transition: opacity 0.25s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
-
-.sh-cog.visible,
-.sh-cog:focus-visible { opacity: 1; }
-
-.sh-cog:hover,
-.sh-cog:focus-visible {
-	outline: none;
-	transform: scale(1.1);
-	box-shadow: 0 0 20px rgba(255, 255, 255, 0.35);
-	border-color: #fff;
-}
+.sh-cog.visible, .sh-cog:focus-visible { opacity: 1; }
+.sh-cog:hover, .sh-cog:focus-visible { outline: none; transform: scale(1.1); box-shadow: 0 0 20px rgba(255, 255, 255, 0.35); border-color: var(--sh-accent); }
 
 .sh-toast {
 	position: fixed;
@@ -47,51 +134,17 @@
 	pointer-events: none;
 	transition: opacity 0.2s ease, transform 0.2s ease;
 }
-
 .sh-toast.visible { opacity: 1; transform: translate(-50%, 0); }
 .sh-toast.error { border-color: #ff6b6b; }
 
 /* ---------- PIN pad ---------- */
 
-.sh-pin {
-	position: fixed;
-	inset: 0;
-	z-index: 10015;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: rgba(0, 0, 0, 0.75);
-}
-
-.sh-pin-card {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 14px;
-	padding: 28px 32px;
-	border-radius: 18px;
-	background: #1a1a1a;
-	border: 1px solid rgba(255, 255, 255, 0.2);
-	color: #fff;
-}
-
+.sh-pin { position: fixed; inset: 0; z-index: 10015; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.75); }
+.sh-pin-card { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 28px 32px; border-radius: 18px; background: #1a1a1a; border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; }
 .sh-pin-title { font-size: 22px; }
 .sh-pin-dots { font-size: 26px; letter-spacing: 10px; min-height: 32px; }
 .sh-pin-keys { display: grid; grid-template-columns: repeat(3, 72px); gap: 10px; }
-
-.sh-pin-keys button,
-.sh-pin-cancel {
-	appearance: none;
-	font-family: inherit;
-	font-size: 22px;
-	height: 60px;
-	border-radius: 12px;
-	border: 1px solid rgba(255, 255, 255, 0.25);
-	background: #2a2a2a;
-	color: #fff;
-	cursor: pointer;
-}
-
+.sh-pin-keys button, .sh-pin-cancel { appearance: none; font-family: inherit; font-size: 22px; height: 60px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.25); background: #2a2a2a; color: #fff; cursor: pointer; }
 .sh-pin-cancel { font-size: 16px; height: 40px; padding: 0 24px; }
 .sh-pin-error { min-height: 20px; color: #ff6b6b; font-size: 15px; }
 
@@ -99,9 +152,7 @@
 
 .sh-panel {
 	position: fixed;
-	top: 0;
-	right: 0;
-	bottom: 0;
+	top: 0; right: 0; bottom: 0;
 	width: 560px;
 	max-width: 100vw;
 	z-index: 10012;
@@ -115,67 +166,24 @@
 	transform: translateX(100%);
 	transition: transform 0.25s ease;
 }
-
 .sh-panel.open { transform: translateX(0); }
-
-.sh-panel-head {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 20px 24px;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
+.sh-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
 .sh-panel-title { font-size: 24px; font-weight: 300; }
-
-.sh-panel-nav {
-	display: flex;
-	gap: 6px;
-	padding: 12px 24px;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.sh-nav {
-	appearance: none;
-	font-family: inherit;
-	font-size: 16px;
-	padding: 8px 16px;
-	border-radius: 999px;
-	border: 1px solid transparent;
-	background: transparent;
-	color: rgba(255, 255, 255, 0.6);
-	cursor: pointer;
-}
-
+.sh-panel-nav { display: flex; gap: 6px; padding: 12px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); flex-wrap: wrap; }
+.sh-nav { appearance: none; font-family: inherit; font-size: 16px; padding: 8px 16px; border-radius: 999px; border: 1px solid transparent; background: transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer; }
 .sh-nav.active { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.sh-panel-body { flex: 1; overflow-y: auto; padding: 16px 24px 32px; }
 
-.sh-panel-body {
-	flex: 1;
-	overflow-y: auto;
-	padding: 16px 24px 32px;
-}
-
-.sh-row {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	padding: 10px 0;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
+.sh-section-head { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255, 255, 255, 0.5); margin: 18px 0 2px; }
+.sh-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
 .sh-row-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sh-row-controls { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-
+.sh-row-controls { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+.sh-arrows { display: inline-flex; gap: 3px; }
+.sh-arrows .sh-btn { padding: 6px 8px; font-size: 12px; }
 .sh-note { color: rgba(255, 255, 255, 0.55); font-size: 14px; margin: 14px 0 8px; }
-
 .sh-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
 
-.sh-btn,
-.sh-toggle,
-.sh-cycler,
-.sh-panel-close,
-.sh-input {
+.sh-btn, .sh-toggle, .sh-cycler, .sh-panel-close, .sh-input {
 	appearance: none;
 	font-family: inherit;
 	font-size: 15px;
@@ -186,7 +194,7 @@
 	color: #fff;
 	cursor: pointer;
 }
-
+.sh-btn:disabled { opacity: 0.3; cursor: default; }
 .sh-input { cursor: text; background: #111; min-width: 150px; }
 .sh-input[type="color"] { width: 48px; min-width: 0; padding: 2px; height: 36px; }
 .sh-small { padding: 7px 10px; }
@@ -194,73 +202,47 @@
 .sh-toggle.on { background: #2e7d32; border-color: #4caf50; }
 .sh-cycler { min-width: 150px; text-align: center; }
 .sh-panel-close { background: #fff; color: #000; border-color: #fff; }
+.sh-chip { font-size: 14px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.25); background: #262626; cursor: grab; user-select: none; }
+.sh-chip.placed { opacity: 0.5; }
 
-.sh-focusable:focus-visible,
-.sh-panel .sh-focusable:focus {
-	outline: none;
-	border-color: #fff;
-	box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
-}
-
-/* modules flagged off at boot stay invisible until the shell locks them hidden */
-.module.sh-off { visibility: hidden; }
+.sh-focusable:focus-visible, .sh-panel .sh-focusable:focus { outline: none; border-color: var(--sh-accent); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5); }
 
 /* ---------- themes ---------- */
 
-:root { --sh-accent: #ffffff; }
-
-/* Tiles: each regular module sits in a card */
-body[data-sh-theme="tiles"] .module:not(.sh-core):not(.sh-hero):not(.sh-apps):not(.sh-topbar):not(.alert):not(.updatenotification) {
+/* Tiles: regular modules in cards */
+body[data-sh-theme="tiles"] .sh-slot > .module:not(.sh-hero):not(.sh-apps):not(.sh-topbar) {
 	background: rgba(255, 255, 255, 0.06);
 	border: 1px solid rgba(255, 255, 255, 0.08);
-	border-radius: 18px;
+	border-radius: var(--sh-radius);
 	padding: 18px 22px;
-	margin-bottom: 14px;
 }
 
-/* No spacing: cards edge to edge, no rounding, no body margins between them */
-body[data-sh-theme="nospacing"] .module:not(.sh-core):not(.sh-hero):not(.sh-apps):not(.sh-topbar):not(.alert):not(.updatenotification) {
+/* No spacing: cards edge to edge */
+body[data-sh-theme="nospacing"] { --sh-gap: 0px; --sh-radius: 0px; }
+body[data-sh-theme="nospacing"] .sh-slot > .module:not(.sh-hero):not(.sh-apps):not(.sh-topbar) {
 	background: rgba(255, 255, 255, 0.05);
 	border: 0;
+	border-right: 1px solid rgba(255, 255, 255, 0.07);
 	border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-	border-radius: 0;
 	padding: 16px 20px;
-	margin: 0;
 }
-body[data-sh-theme="nospacing"] .sh-hero { border-radius: 0; }
-body[data-sh-theme="nospacing"] .sh-tile { border-radius: 0; }
-body[data-sh-theme="nospacing"] .sh-rail { gap: 10px; padding-top: 14px; padding-bottom: 14px; }
+body[data-sh-theme="nospacing"] .sh-hero, body[data-sh-theme="nospacing"] .sh-tile { border-radius: 0; }
+body[data-sh-theme="nospacing"] .sh-rail { gap: 10px; }
 
-/* Full width: no page margins, hero bleeds to the top, top bar floats over it */
-body[data-sh-theme="fullwidth"] {
-	--gap-body-top: 0px;
-	--gap-body-right: 0px;
-	--gap-body-bottom: 0px;
-	--gap-body-left: 0px;
-}
-body[data-sh-theme="fullwidth"] .region.top.bar {
+/* Full width: no page margins, hero to the top edge, top bar floating over it */
+body[data-sh-theme="fullwidth"] { --gap-body-top: 0px; --gap-body-right: 0px; --gap-body-bottom: 0px; --gap-body-left: 0px; --sh-gap: 0px; --sh-radius: 0px; }
+body[data-sh-theme="fullwidth"] .sh-row-topbar {
 	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
+	top: 0; left: 0; right: 0;
 	z-index: 5;
 	padding: 18px 36px 40px;
 	background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.45) 60%, transparent 100%);
 	pointer-events: none;
 }
-body[data-sh-theme="fullwidth"] .region.top.bar * { pointer-events: auto; }
-body[data-sh-theme="fullwidth"] .sh-hero {
-	border-radius: 0;
-	border-left: 0;
-	border-right: 0;
-	border-top: 0;
-	height: 52vh;
-}
+body[data-sh-theme="fullwidth"] .sh-row-topbar * { pointer-events: auto; }
+body[data-sh-theme="fullwidth"] .sh-hero { border-radius: 0; border: 0; }
 body[data-sh-theme="fullwidth"] .sh-hero-meta { bottom: 56px; left: 56px; }
-body[data-sh-theme="fullwidth"] .region.upper.third { margin-top: 0; }
-body[data-sh-theme="fullwidth"] .region.middle.center,
-body[data-sh-theme="fullwidth"] .region.lower.third,
-body[data-sh-theme="fullwidth"] .region.bottom.bar { padding-left: 36px; padding-right: 36px; }
+body[data-sh-theme="fullwidth"] .sh-slot > .module:not(.sh-hero):not(.sh-apps):not(.sh-topbar) { padding: 18px 36px; }
+body[data-sh-theme="fullwidth"] .sh-row-bottom { padding: 0 36px 16px; }
 
-/* accent used for focus rings everywhere */
 .sh-tile.selected, .sh-hero.focused, .sh-cog:focus-visible, .sh-panel .sh-focusable:focus { border-color: var(--sh-accent); }

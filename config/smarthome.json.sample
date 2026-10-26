@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "adminPin": "1234",
   "general": {
     "language": "en",
@@ -22,6 +22,31 @@
     "interval": 10000,
     "region": "US"
   },
+  "appearance": {
+    "theme": "fullwidth",
+    "accent": "#cf2626"
+  },
+  "topbar": {
+    "greeting": true,
+    "name": "",
+    "search": true,
+    "showWeather": true,
+    "showTime": true,
+    "links": [
+      {
+        "name": "YouTube",
+        "url": "https://www.youtube.com/"
+      },
+      {
+        "name": "Traffic",
+        "url": "https://www.google.com/maps/@47.2529,-122.4443,11z/data=!5m1!1e1"
+      },
+      {
+        "name": "News",
+        "url": "https://news.google.com/"
+      }
+    ]
+  },
   "apps": [
     {
       "name": "Netflix",
@@ -40,25 +65,29 @@
   ],
   "modules": [
     {
+      "id": "topbar",
+      "name": "Top bar",
+      "module": "MMM-SmartHomeTopBar"
+    },
+    {
+      "id": "hero",
+      "name": "Trending hero",
+      "module": "MMM-SmartHomeHero"
+    },
+    {
       "id": "apps",
-      "name": "Apps",
-      "module": "MMM-SmartHomeApps",
-      "position": "middle_center",
-      "enabled": true
+      "name": "App rail",
+      "module": "MMM-SmartHomeApps"
     },
     {
       "id": "clock",
       "name": "Clock",
-      "module": "clock",
-      "position": "bottom_left",
-      "enabled": true
+      "module": "clock"
     },
     {
       "id": "calendar",
       "name": "Calendar",
       "module": "calendar",
-      "position": "top_left",
-      "enabled": false,
       "header": "US Holidays",
       "config": {
         "calendars": [
@@ -71,22 +100,18 @@
       }
     },
     {
-      "id": "weather-current",
-      "name": "Weather (current)",
+      "id": "weather",
+      "name": "Weather now",
       "module": "weather",
-      "position": "top_right",
-      "enabled": true,
       "config": {
         "weatherProvider": "openmeteo",
         "type": "current"
       }
     },
     {
-      "id": "weather-forecast",
-      "name": "Weather (forecast)",
+      "id": "forecast",
+      "name": "Forecast",
       "module": "weather",
-      "position": "top_right",
-      "enabled": false,
       "header": "Weather Forecast",
       "config": {
         "weatherProvider": "openmeteo",
@@ -97,8 +122,6 @@
       "id": "news",
       "name": "News",
       "module": "newsfeed",
-      "position": "bottom_bar",
-      "enabled": false,
       "config": {
         "feeds": [
           {
@@ -115,16 +138,46 @@
     {
       "id": "compliments",
       "name": "Compliments",
-      "module": "compliments",
-      "position": "lower_third",
-      "enabled": false
-    },
-    {
-      "id": "hero",
-      "name": "Trending (hero)",
-      "module": "MMM-SmartHomeHero",
-      "position": "upper_third",
-      "enabled": true
+      "module": "compliments"
     }
-  ]
+  ],
+  "layout": {
+    "topbar": true,
+    "sections": [
+      {
+        "id": "upper",
+        "enabled": true,
+        "size": 2,
+        "split": "1",
+        "slots": [
+          "hero"
+        ]
+      },
+      {
+        "id": "middle",
+        "enabled": true,
+        "size": 1,
+        "split": "1",
+        "slots": [
+          "apps"
+        ]
+      },
+      {
+        "id": "lower",
+        "enabled": true,
+        "size": 1,
+        "split": "2",
+        "slots": [
+          "clock",
+          "weather"
+        ]
+      }
+    ],
+    "bottombar": {
+      "enabled": false,
+      "slots": [
+        "news"
+      ]
+    }
+  }
 }

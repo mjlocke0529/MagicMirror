@@ -182,12 +182,17 @@ Module.register("MMM-SmartHomeTopBar", {
 
 	/* ---------- remote ---------- */
 
+	offScreen () {
+		const el = document.getElementById(this.identifier);
+		return !el || !!el.closest(".sh-parking");
+	},
+
 	shellBusy () {
 		return ["sh-pin-open", "sh-panel-open", "sh-overlay-open"].some((c) => document.body.classList.contains(c));
 	},
 
 	onKey (event) {
-		if (!this.focused || this.shellBusy() || this.hidden) return;
+		if (!this.focused || this.shellBusy() || this.hidden || this.offScreen()) return;
 		const items = this.items();
 		const active = document.activeElement;
 		const typing = active && active.tagName === "INPUT";

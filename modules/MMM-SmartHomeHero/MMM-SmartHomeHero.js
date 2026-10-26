@@ -168,6 +168,11 @@ Module.register("MMM-SmartHomeHero", {
 
 	/* ---------- remote ---------- */
 
+	offScreen () {
+		const el = document.getElementById(this.identifier);
+		return !el || !!el.closest(".sh-parking");
+	},
+
 	overlayOpen () {
 		return document.body.classList.contains("sh-overlay-open");
 	},
@@ -177,7 +182,7 @@ Module.register("MMM-SmartHomeHero", {
 	},
 
 	onKey (event) {
-		if (!this.focused || this.shellBusy() || this.hidden) return;
+		if (!this.focused || this.shellBusy() || this.hidden || this.offScreen()) return;
 		switch (event.key) {
 			case "ArrowRight": this.step(1); break;
 			case "ArrowLeft": this.step(-1); break;

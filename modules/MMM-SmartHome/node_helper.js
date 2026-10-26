@@ -1,9 +1,10 @@
 const path = require("node:path");
 const NodeHelper = require("node_helper");
 const Log = require("logger");
-const { loadSmartHome, saveSmartHome, POSITIONS } = require("./lib/config-builder");
+const { loadSmartHome, saveSmartHome } = require("./lib/config-builder");
 
 const JSON_PATH = path.resolve(__dirname, "..", "..", "config", "smarthome.json");
+const ALLOWED = ["apps", "modules", "weather", "general", "hero", "appearance", "topbar", "layout"];
 
 module.exports = NodeHelper.create({
 	start () {
@@ -24,12 +25,12 @@ module.exports = NodeHelper.create({
 		return typeof pin === "string" && pin.length > 0 && pin === String(data.adminPin);
 	},
 
-	/** Everything the renderer needs, minus the PIN itself. */
+	/** Everything the renderer needs, minus secrets. */
 	publicState () {
 		const data = this.load();
 		const { adminPin, ...rest } = data;
 		rest.hero = { ...rest.hero, tmdbApiKey: rest.hero && rest.hero.tmdbApiKey ? "set" : "" };
-		return { ...rest, positions: POSITIONS };
+		return rest;
 	},
 
 	broadcast () {
@@ -46,7 +47,7 @@ module.exports = NodeHelper.create({
 				this.sendSocketNotification("SH_PIN_RESULT", { ok: this.checkPin(payload.pin), token: payload.token });
 				break;
 
-			case "SH_UPDATE": // { pin, patch: { apps?, modules?, weather?, general? }, relaunch? }
+			case "SH_UPDATE":
 				this.update(payload);
 				break;
 
@@ -73,18 +74,17 @@ module.exports = NodeHelper.create({
 		}
 	},
 
-	update ({ pin, patch, relaunch }) {
+	update ({ pin, patch }) {
 		if (!this.checkPin(pin)) {
 			Log.warn(`[${this.name}] update rejected: bad PIN`);
 			return;
 		}
 		const data = this.load();
-		const allowed = ["apps", "modules", "weather", "general", "hero", "appearance", "topbar"];
 		for (const key of Object.keys(patch || {})) {
-			if (!allowed.includes(key)) continue;
+			if (!ALLOWED.includes(key)) continue;
 			if (key === "hero") {
 				const hero = { ...data.hero, ...patch.hero };
-				if (!patch.hero.tmdbApiKey) hero.tmdbApiKey = data.hero.tmdbApiKey; // keep existing key unless a new one is given
+				if (!patch.hero.tmdbApiKey) hero.tmdbApiKey = data.hero.tmdbApiKey; // keep the key unless a new one is given
 				data.hero = hero;
 			} else {
 				data[key] = patch[key];
@@ -98,10 +98,6 @@ module.exports = NodeHelper.create({
 			return;
 		}
 		this.broadcast();
-		if (relaunch) {
-			this.sendSocketNotification("SH_TOAST", { ok: true, message: "Saved. Restarting…" });
-			setTimeout(() => this.relaunch(), 1200);
-		}
 	},
 
 	async setWeather (query) {

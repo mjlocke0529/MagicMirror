@@ -154,6 +154,11 @@ Module.register("MMM-SmartHomeApps", {
 
 	/* ---------- remote / keyboard ---------- */
 
+	offScreen () {
+		const el = document.getElementById(this.identifier);
+		return !el || !!el.closest(".sh-parking");
+	},
+
 	shellBusy () {
 		return document.body.classList.contains("sh-pin-open") || document.body.classList.contains("sh-panel-open");
 	},
@@ -170,7 +175,7 @@ Module.register("MMM-SmartHomeApps", {
 		}
 
 		const apps = this.visibleApps();
-		if (!apps.length || this.hidden) return;
+		if (!apps.length || this.hidden || this.offScreen()) return;
 		switch (event.key) {
 			case "ArrowRight": this.select(this.selected + 1); break;
 			case "ArrowLeft": this.select(this.selected - 1); break;
