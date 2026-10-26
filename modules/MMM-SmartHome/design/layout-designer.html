@@ -1,0 +1,429 @@
+<title>SmartHome Layout Designer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a 16:9 TV preview on the left that scales with the page; a control column on the right.
+   Single dark look by choice: the preview is a TV screen and the controls match it. */
+:root {
+  --bg: #0b0d12;
+  --panel: #141821;
+  --panel-2: #1b2029;
+  --line: rgba(255,255,255,0.09);
+  --fg: #e8ecf3;
+  --muted: #8b94a6;
+  --accent: #5ad4ff;
+  --warn: #ffb454;
+  --font-ui: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
+  --tv-accent: #ffffff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.45;
+  padding-block: 18px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 8px; }
+.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.top p { margin: 0; color: var(--muted); max-width: 70ch; }
+.app { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; }
+@media (max-width: 980px) { .app { grid-template-columns: 1fr; } }
+
+/* ---------- controls ---------- */
+.controls { display: grid; gap: 12px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; }
+.row + .row { border-top: 1px solid var(--line); }
+.row label { color: var(--fg); }
+.seg { display: inline-flex; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; gap: 2px; }
+.seg button { appearance: none; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12px; padding: 5px 9px; border-radius: 6px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #06111a; font-weight: 600; }
+.seg button:focus-visible, .btn:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.switch { position: relative; width: 38px; height: 22px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); cursor: pointer; flex: 0 0 auto; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .15s ease, background .15s ease; }
+.switch[aria-checked="true"] { background: rgba(90,212,255,0.25); border-color: var(--accent); }
+.switch[aria-checked="true"]::after { transform: translateX(16px); background: var(--accent); }
+.btn { appearance: none; font: inherit; font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); cursor: pointer; }
+.btn.primary { background: var(--accent); color: #06111a; border-color: var(--accent); }
+.btn.ghost { background: transparent; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+select, input[type="text"] { font: inherit; font-size: 13px; background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+input[type="color"] { width: 36px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+.section-card .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.section-card .head strong { font-size: 13px; }
+.slots { display: grid; gap: 6px; margin-top: 8px; }
+.slot-row { display: grid; grid-template-columns: 24px 1fr auto; gap: 6px; align-items: center; }
+.slot-row .n { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-align: center; }
+.arrows { display: inline-flex; gap: 2px; }
+.arrows button { appearance: none; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); width: 24px; height: 24px; border-radius: 6px; cursor: pointer; font-size: 11px; padding: 0; }
+.arrows button:disabled { opacity: .3; cursor: default; }
+.palette { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); cursor: grab; user-select: none; }
+.chip:active { cursor: grabbing; }
+.hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+textarea { width: 100%; min-height: 160px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.4; background: #0d1016; color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; resize: vertical; }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--accent); color: var(--fg); padding: 8px 14px; border-radius: 999px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+
+/* ---------- TV preview ---------- */
+.stage { min-width: 0; position: sticky; top: 12px; }
+.tv-wrap { container-type: inline-size; width: 100%; }
+.tv {
+  position: relative; width: 100%; aspect-ratio: 16 / 9; max-width: 100%;
+  background: #000; border-radius: 1.2cqw; overflow: hidden;
+  border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  color: #fff; font-family: var(--font-ui);
+  display: flex; flex-direction: column;
+  padding: var(--gap); gap: var(--gap);
+  --gap: 2cqw; --radius: 1.2cqw; --card: rgba(255,255,255,0.06); --card-line: rgba(255,255,255,0.08);
+}
+.tv.theme-nospacing { --gap: 0cqw; --radius: 0; padding: 0; }
+.tv.theme-fullwidth { --gap: 0cqw; --radius: 0; padding: 0; }
+.tv .caption { position: absolute; left: 1cqw; bottom: .6cqw; font-size: .9cqw; color: rgba(255,255,255,.35); font-family: var(--font-mono); pointer-events: none; z-index: 20; }
+
+.tb { flex: 0 0 auto; display: flex; align-items: center; gap: 1.2cqw; padding: .6cqw 0; font-size: 1.1cqw; z-index: 6; }
+.tv.theme-fullwidth .tb { position: absolute; top: 0; left: 0; right: 0; padding: 1.2cqw 2cqw 2.4cqw; background: linear-gradient(rgba(0,0,0,.85), rgba(0,0,0,.4) 60%, transparent); }
+.tb .greet { font-size: 1.5cqw; font-weight: 300; white-space: nowrap; }
+.tb .mid { flex: 1; display: flex; justify-content: center; gap: .6cqw; min-width: 0; }
+.tb .search { flex: 0 1 24cqw; min-width: 10cqw; padding: .45cqw 1cqw; border-radius: 99cqw; border: .12cqw solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: rgba(255,255,255,.5); white-space: nowrap; overflow: hidden; }
+.tb .pill { padding: .45cqw .9cqw; border-radius: 99cqw; border: .12cqw solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); white-space: nowrap; }
+.tb .right { display: flex; gap: .6cqw; }
+.tb .cog { width: 2.2cqw; height: 2.2cqw; border-radius: 50%; border: .1cqw solid rgba(255,255,255,.3); display: grid; place-items: center; font-size: 1.3cqw; }
+
+.sec { display: flex; gap: var(--gap); min-height: 0; }
+.sec.bar { flex: 0 0 auto; }
+.slot { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; border-radius: var(--radius); overflow: hidden; display: flex; }
+.slot.drop { outline: .25cqw dashed var(--tv-accent); outline-offset: -.25cqw; }
+.slot .mod { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 1.2cqw 1.5cqw; gap: .4cqw; background: var(--card); border: .08cqw solid var(--card-line); border-radius: var(--radius); }
+.tv.theme-nospacing .slot .mod { border: 0; border-right: .08cqw solid var(--card-line); border-bottom: .08cqw solid var(--card-line); }
+.tv.theme-fullwidth .slot .mod { background: transparent; border: 0; }
+.mod .h { font-size: .85cqw; text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,.5); border-bottom: .06cqw solid rgba(255,255,255,.15); padding-bottom: .3cqw; margin-bottom: .3cqw; }
+.mod .big { font-size: 3.6cqw; font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; }
+.mod .line { font-size: 1cqw; color: rgba(255,255,255,.8); display: flex; justify-content: space-between; gap: 1cqw; }
+.mod .line.dim { color: rgba(255,255,255,.45); }
+.mod.empty { align-items: center; justify-content: center; color: rgba(255,255,255,.3); font-size: 1cqw; border-style: dashed; }
+.mod.hero { padding: 0; position: relative; border: 0; background: #1a1f2b; }
+.mod.hero .art { position: absolute; inset: 0; background: radial-gradient(70% 90% at 75% 30%, #ff8a5c 0%, #7b3fe4 45%, #0d1b2a 100%); animation: drift 12s ease-in-out infinite alternate; }
+@keyframes drift { from { transform: scale(1); } to { transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .mod.hero .art { animation: none; } }
+.mod.hero .shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.85), rgba(0,0,0,.5) 40%, transparent 70%), linear-gradient(0deg, rgba(0,0,0,.7), transparent 45%); }
+.mod.hero .meta { position: absolute; left: 2.2cqw; bottom: 2cqw; right: 40%; display: flex; flex-direction: column; gap: .5cqw; }
+.mod.hero .chips { display: flex; gap: .4cqw; }
+.mod.hero .chip-s { font-size: .8cqw; padding: .2cqw .6cqw; border-radius: 99cqw; background: rgba(255,255,255,.15); }
+.mod.hero .chip-s.nf { background: #e50914; }
+.mod.hero .t { font-size: 2.6cqw; font-weight: 600; line-height: 1.05; }
+.mod.hero .o { font-size: .95cqw; color: rgba(255,255,255,.85); }
+.mod.hero.compact .meta { right: 10%; }
+.mod.hero.compact .t { font-size: 1.8cqw; }
+.mod.hero.compact .o { display: none; }
+.mod.apps { padding: 1cqw 0; background: transparent; border: 0; justify-content: center; }
+.rail { display: flex; gap: 1.1cqw; padding: .8cqw 6cqw; overflow: hidden; -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent); mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent); }
+.tile { flex: 0 0 16cqw; aspect-ratio: 16/9; border-radius: var(--radius, .9cqw); position: relative; overflow: hidden; border: .15cqw solid transparent; opacity: .8; }
+.tile.sel { opacity: 1; border-color: var(--tv-accent); transform: scale(1.06); box-shadow: 0 0 1.5cqw rgba(255,255,255,.3); }
+.tile .ft { position: absolute; left: 0; right: 0; bottom: 0; padding: .7cqw .8cqw; display: flex; align-items: center; gap: .6cqw; background: linear-gradient(to top, rgba(0,0,0,.6), transparent); font-size: 1.1cqw; font-weight: 600; }
+.tile .ic { width: 2.4cqw; height: 2.4cqw; border-radius: .5cqw; background: rgba(255,255,255,.9); color: #000; display: grid; place-items: center; font-size: 1.3cqw; font-weight: 800; }
+.mod.news { justify-content: center; align-items: center; text-align: center; }
+.mod.news .src { font-size: .85cqw; color: rgba(255,255,255,.5); }
+.mod.news .hl { font-size: 1.5cqw; font-weight: 400; }
+.mod.photo { padding: 0; background: linear-gradient(135deg, #2c5364, #203a43, #0f2027); align-items: flex-end; justify-content: flex-end; }
+.mod.photo span { padding: 1cqw; font-size: .9cqw; color: rgba(255,255,255,.6); }
+.mod.smart .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6cqw; margin-top: .3cqw; }
+.mod.smart .dev { background: rgba(255,255,255,.08); border-radius: .6cqw; padding: .7cqw; font-size: .9cqw; }
+.mod.smart .dev b { display: block; font-size: 1.2cqw; }
+.mod.smart .dev.on { background: rgba(90,212,255,.2); }
+.mod.compl { align-items: center; justify-content: center; font-size: 2.4cqw; font-weight: 200; }
+.mod.cal .line { font-size: .95cqw; }
+.mod.fc .line { font-size: .9cqw; }
+.slot .tag { position: absolute; top: .4cqw; right: .5cqw; font-family: var(--font-mono); font-size: .75cqw; color: rgba(255,255,255,.4); background: rgba(0,0,0,.5); padding: .1cqw .4cqw; border-radius: .3cqw; z-index: 2; pointer-events: none; }
+.tv.hide-tags .slot .tag { display: none; }
+</style>
+
+<div class="top">
+  <div>
+    <h1>SmartHome Layout Designer</h1>
+    <p>Arrange the dashboard on a 1080p TV. Drag modules from the palette into slots, or use the arrows. Export gives the layout spec the mirror will implement.</p>
+  </div>
+  <div class="btns">
+    <button class="btn ghost" id="toggleTags" type="button">Hide slot tags</button>
+  </div>
+</div>
+
+<div class="app">
+  <div class="stage">
+    <div class="tv-wrap"><div class="tv" id="tv"></div></div>
+  </div>
+
+  <div class="controls">
+    <div class="card">
+      <h2>Presets</h2>
+      <div class="btns" id="presets"></div>
+    </div>
+
+    <div class="card">
+      <h2>Theme</h2>
+      <div class="row"><label>Look</label><div class="seg" id="themeSeg"></div></div>
+      <div class="row"><label for="accent">Accent</label><input type="color" id="accent" value="#ffffff"></div>
+      <div class="row"><label>Top bar</label><button class="switch" id="topbarSw" role="switch" aria-checked="true" type="button"></button></div>
+    </div>
+
+    <div id="sections"></div>
+
+    <div class="card">
+      <h2>Module palette</h2>
+      <div class="palette" id="palette"></div>
+      <p class="hint">Drag a chip onto a slot. Dropping onto an occupied slot replaces it; drag between slots to swap.</p>
+    </div>
+
+    <div class="card">
+      <h2>Spec</h2>
+      <textarea id="spec" spellcheck="false" aria-label="Layout spec JSON"></textarea>
+      <div class="btns" style="margin-top:8px">
+        <button class="btn primary" id="copySpec" type="button">Copy JSON</button>
+        <button class="btn" id="applySpec" type="button">Apply edited JSON</button>
+        <button class="btn ghost" id="resetSpec" type="button">Reset</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+"use strict";
+
+const MODULES = {
+  hero:        { label: "Trending hero",   kind: "hero" },
+  apps:        { label: "App rail",        kind: "apps" },
+  clock:       { label: "Clock",           kind: "clock" },
+  calendar:    { label: "Calendar",        kind: "cal" },
+  weather:     { label: "Weather now",     kind: "wx" },
+  forecast:    { label: "Forecast",        kind: "fc" },
+  news:        { label: "News",            kind: "news" },
+  compliments: { label: "Compliments",     kind: "compl" },
+  photos:      { label: "Photo frame",     kind: "photo" },
+  smarthome:   { label: "Smart home",      kind: "smart" },
+  empty:       { label: "Empty",           kind: "empty" }
+};
+
+const SPLITS = { "1": [1], "2": [1, 1], "3": [1, 1, 1], "1-2": [1, 2], "2-1": [2, 1] };
+const SPLIT_LABELS = { "1": "1", "2": "1×2", "3": "1×3", "1-2": "⅓ + ⅔", "2-1": "⅔ + ⅓" };
+const SIZES = { 1: "⅓", 2: "⅔" };
+
+const PRESETS = {
+  "Streaming": {
+    theme: "fullwidth", accent: "#ffffff", topbar: true,
+    sections: [
+      { id: "upper", enabled: true, size: 2, split: "1", slots: ["hero"] },
+      { id: "middle", enabled: true, size: 1, split: "1", slots: ["apps"] },
+      { id: "lower", enabled: false, size: 1, split: "3", slots: ["clock", "weather", "calendar"] }
+    ],
+    bottombar: { enabled: true, slots: ["news"] }
+  },
+  "Dashboard": {
+    theme: "tiles", accent: "#5ad4ff", topbar: true,
+    sections: [
+      { id: "upper", enabled: true, size: 1, split: "1-2", slots: ["clock", "hero"] },
+      { id: "middle", enabled: true, size: 1, split: "1", slots: ["apps"] },
+      { id: "lower", enabled: true, size: 1, split: "3", slots: ["calendar", "weather", "smarthome"] }
+    ],
+    bottombar: { enabled: true, slots: ["news"] }
+  },
+  "Family board": {
+    theme: "nospacing", accent: "#ffb454", topbar: true,
+    sections: [
+      { id: "upper", enabled: true, size: 1, split: "2-1", slots: ["calendar", "weather"] },
+      { id: "middle", enabled: true, size: 1, split: "1", slots: ["apps"] },
+      { id: "lower", enabled: true, size: 1, split: "2", slots: ["photos", "forecast"] }
+    ],
+    bottombar: { enabled: false, slots: ["news"] }
+  },
+  "Minimal": {
+    theme: "tiles", accent: "#ffffff", topbar: false,
+    sections: [
+      { id: "upper", enabled: true, size: 1, split: "2-1", slots: ["clock", "weather"] },
+      { id: "middle", enabled: true, size: 1, split: "1", slots: ["apps"] },
+      { id: "lower", enabled: false, size: 1, split: "1", slots: ["compliments"] }
+    ],
+    bottombar: { enabled: false, slots: ["news"] }
+  }
+};
+
+let state = clone(PRESETS["Streaming"]);
+try { const saved = localStorage.getItem("sh-layout"); if (saved) state = JSON.parse(saved); } catch {}
+
+function clone (o) { return JSON.parse(JSON.stringify(o)); }
+function save () { try { localStorage.setItem("sh-layout", JSON.stringify(state)); } catch {} }
+function toast (msg) { const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1800); }
+function esc (s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c])); }
+
+/* ---------- preview ---------- */
+
+function renderModule (id, ctx) {
+  const m = MODULES[id] || MODULES.empty;
+  switch (m.kind) {
+    case "hero": return `<div class="mod hero ${ctx.narrow ? "compact" : ""}"><div class="art"></div><div class="shade"></div><div class="meta"><div class="chips"><span class="chip-s nf">Netflix</span><span class="chip-s">2026</span><span class="chip-s">★ 8.1</span><span class="chip-s">Series</span></div><div class="t">Night Harbor</div><div class="o">A lighthouse keeper's daughter uncovers the town's hidden tide charts and the ships that never arrived.</div></div></div>`;
+    case "apps": return `<div class="mod apps"><div class="rail">${[["N","Netflix","#e50914"],["D","Disney+","#0f3fa3"],["▶","YouTube","#b3000c"],["P","Prime","#00a8e1"],["H","Hulu","#1ce783"]].map((a,i)=>`<div class="tile ${i===0?"sel":""}" style="background:linear-gradient(135deg,${a[2]},#000)"><div class="ft"><span class="ic">${a[0]}</span>${a[1]}</div></div>`).join("")}</div></div>`;
+    case "clock": return `<div class="mod clock"><div class="line dim"><span>Monday, October 26</span></div><div class="big">4:52<span style="font-size:.4em"> pm</span></div></div>`;
+    case "cal": return `<div class="mod cal"><div class="h">Family calendar</div><div class="line"><span>Soccer practice</span><span>Today 5:30 pm</span></div><div class="line"><span>Piano lesson</span><span>Tue 4:00 pm</span></div><div class="line dim"><span>Youth group</span><span>Wed 6:30 pm</span></div><div class="line dim"><span>Veterans Day</span><span>Nov 11</span></div></div>`;
+    case "wx": return `<div class="mod wx"><div class="line dim"><span>Tacoma, WA</span><span>WSW 2 mph</span></div><div class="big">54°</div><div class="line dim"><span>Partly cloudy · feels like 54°</span></div></div>`;
+    case "fc": return `<div class="mod fc"><div class="h">Forecast</div>${[["Today","55°","46°"],["Tue","53°","45°"],["Wed","51°","41°"],["Thu","52°","41°"]].map(d=>`<div class="line"><span>${d[0]}</span><span>${d[1]} / <span style="opacity:.5">${d[2]}</span></span></div>`).join("")}</div>`;
+    case "news": return `<div class="mod news"><div class="src">New York Times · 3 hours ago</div><div class="hl">Puget Sound ferries add late-night winter service on three routes</div></div>`;
+    case "compl": return `<div class="mod compl">Have a great evening.</div>`;
+    case "photo": return `<div class="mod photo"><span>Family photos · Dash Point, Aug 2026</span></div>`;
+    case "smart": return `<div class="mod smart"><div class="h">Home</div><div class="grid"><div class="dev on"><b>72°</b>Thermostat</div><div class="dev on"><b>On</b>Living room</div><div class="dev"><b>Locked</b>Front door</div></div></div>`;
+    default: return `<div class="mod empty">Empty slot</div>`;
+  }
+}
+
+function render () {
+  const tv = document.getElementById("tv");
+  tv.className = `tv theme-${state.theme}${tv.classList.contains("hide-tags") ? " hide-tags" : ""}`;
+  tv.style.setProperty("--tv-accent", state.accent);
+  let html = "";
+
+  if (state.topbar) {
+    html += `<div class="tb"><span class="greet">Good evening, Locke family</span><div class="mid"><span class="search">🔍 Search Google…</span><span class="pill">YouTube</span><span class="pill">Traffic</span><span class="pill">News</span></div><div class="right"><span class="pill">🌤️ 54°F</span><span class="pill">4:52 PM</span><span class="cog">⚙</span></div></div>`;
+  }
+
+  state.sections.forEach((sec) => {
+    if (!sec.enabled) return;
+    const parts = SPLITS[sec.split] || [1];
+    html += `<div class="sec" style="flex:${sec.size} 1 0" data-sec="${sec.id}">`;
+    parts.forEach((w, i) => {
+      const id = sec.slots[i] || "empty";
+      html += `<div class="slot" style="flex:${w} 1 0" data-sec="${sec.id}" data-i="${i}" draggable="true"><span class="tag">${sec.id}·${i + 1}</span>${renderModule(id, { narrow: w === 1 && parts.length > 1 })}</div>`;
+    });
+    html += `</div>`;
+  });
+
+  if (state.bottombar.enabled) {
+    html += `<div class="sec bar" data-sec="bottombar"><div class="slot" data-sec="bottombar" data-i="0" draggable="true"><span class="tag">bottom</span>${renderModule(state.bottombar.slots[0] || "news", {})}</div></div>`;
+  }
+  html += `<div class="caption">1920 × 1080 · ${state.theme} · top bar ${state.topbar ? "on" : "off"}</div>`;
+  tv.innerHTML = html;
+  wireDrops();
+  renderControls();
+  document.getElementById("spec").value = JSON.stringify(state, null, 2);
+  save();
+}
+
+/* ---------- drag & drop ---------- */
+
+let drag = null; // { from: {sec, i} } or { module }
+function wireDrops () {
+  document.querySelectorAll("#tv .slot").forEach((slot) => {
+    slot.addEventListener("dragstart", (e) => { drag = { from: { sec: slot.dataset.sec, i: +slot.dataset.i } }; e.dataTransfer.effectAllowed = "move"; });
+    slot.addEventListener("dragover", (e) => { e.preventDefault(); slot.classList.add("drop"); });
+    slot.addEventListener("dragleave", () => slot.classList.remove("drop"));
+    slot.addEventListener("drop", (e) => {
+      e.preventDefault(); slot.classList.remove("drop");
+      const to = { sec: slot.dataset.sec, i: +slot.dataset.i };
+      if (!drag) return;
+      if (drag.module) setSlot(to, drag.module);
+      else if (drag.from) swap(drag.from, to);
+      drag = null; render();
+    });
+  });
+}
+function slotsOf (sec) { return sec === "bottombar" ? state.bottombar.slots : state.sections.find((s) => s.id === sec).slots; }
+function getSlot (p) { return slotsOf(p.sec)[p.i] || "empty"; }
+function setSlot (p, v) { slotsOf(p.sec)[p.i] = v; }
+function swap (a, b) { const av = getSlot(a), bv = getSlot(b); setSlot(a, bv); setSlot(b, av); }
+
+/* ---------- controls ---------- */
+
+function seg (el, options, value, onPick) {
+  el.innerHTML = "";
+  options.forEach(([v, label]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = label; b.setAttribute("aria-pressed", String(v === value));
+    b.addEventListener("click", () => { onPick(v); render(); });
+    el.appendChild(b);
+  });
+}
+
+function renderControls () {
+  seg(document.getElementById("themeSeg"), [["tiles", "Tiles"], ["nospacing", "No spacing"], ["fullwidth", "Full width"]], state.theme, (v) => state.theme = v);
+  document.getElementById("accent").value = state.accent;
+  document.getElementById("topbarSw").setAttribute("aria-checked", String(!!state.topbar));
+
+  const host = document.getElementById("sections");
+  host.innerHTML = "";
+  const all = [...state.sections.map((s) => ({ ...s, kind: "section" })), { id: "bottombar", kind: "bar", enabled: state.bottombar.enabled, slots: state.bottombar.slots }];
+  all.forEach((sec) => {
+    const card = document.createElement("div");
+    card.className = "card section-card";
+    const title = { upper: "Upper third", middle: "Middle", lower: "Lower third", bottombar: "Bottom bar" }[sec.id];
+    card.innerHTML = `<div class="head"><strong>${title}</strong><button class="switch" role="switch" aria-checked="${sec.enabled}" type="button" aria-label="${title} on or off"></button></div>`;
+    card.querySelector(".switch").addEventListener("click", () => { if (sec.kind === "bar") state.bottombar.enabled = !state.bottombar.enabled; else state.sections.find((s) => s.id === sec.id).enabled = !sec.enabled; render(); });
+
+    if (sec.kind === "section") {
+      const r1 = document.createElement("div"); r1.className = "row"; r1.innerHTML = `<label>Height</label><div class="seg"></div>`;
+      seg(r1.querySelector(".seg"), [[1, SIZES[1]], [2, SIZES[2]]], sec.size, (v) => state.sections.find((s) => s.id === sec.id).size = v);
+      card.appendChild(r1);
+      const r2 = document.createElement("div"); r2.className = "row"; r2.innerHTML = `<label>Split</label><div class="seg"></div>`;
+      seg(r2.querySelector(".seg"), Object.keys(SPLITS).map((k) => [k, SPLIT_LABELS[k]]), sec.split, (v) => state.sections.find((s) => s.id === sec.id).split = v);
+      card.appendChild(r2);
+    }
+
+    const parts = sec.kind === "bar" ? [1] : SPLITS[sec.split];
+    const slots = document.createElement("div"); slots.className = "slots";
+    parts.forEach((_, i) => {
+      const row = document.createElement("div"); row.className = "slot-row";
+      const sel = document.createElement("select"); sel.setAttribute("aria-label", `${title} slot ${i + 1}`); sel.id = `sel-${sec.id}-${i}`;
+      Object.entries(MODULES).forEach(([id, m]) => { const o = document.createElement("option"); o.value = id; o.textContent = m.label; o.selected = (sec.slots[i] || "empty") === id; sel.appendChild(o); });
+      sel.addEventListener("change", () => { setSlot({ sec: sec.id, i }, sel.value); render(); });
+      const arrows = document.createElement("div"); arrows.className = "arrows";
+      const mk = (txt, disabled, fn) => { const b = document.createElement("button"); b.type = "button"; b.textContent = txt; b.disabled = disabled; b.addEventListener("click", () => { fn(); render(); }); return b; };
+      const secIdx = state.sections.findIndex((s) => s.id === sec.id);
+      arrows.appendChild(mk("◀", i === 0, () => swap({ sec: sec.id, i }, { sec: sec.id, i: i - 1 })));
+      arrows.appendChild(mk("▶", i >= parts.length - 1, () => swap({ sec: sec.id, i }, { sec: sec.id, i: i + 1 })));
+      arrows.appendChild(mk("▲", sec.kind === "bar" ? state.sections.length === 0 : secIdx <= 0, () => swap({ sec: sec.id, i }, { sec: sec.kind === "bar" ? state.sections[state.sections.length - 1].id : state.sections[secIdx - 1].id, i: 0 })));
+      arrows.appendChild(mk("▼", sec.kind === "bar", () => swap({ sec: sec.id, i }, { sec: secIdx >= state.sections.length - 1 ? "bottombar" : state.sections[secIdx + 1].id, i: 0 })));
+      row.innerHTML = `<span class="n">${i + 1}</span>`;
+      row.appendChild(sel); row.appendChild(arrows);
+      slots.appendChild(row);
+    });
+    card.appendChild(slots);
+    host.appendChild(card);
+  });
+}
+
+/* ---------- static wiring ---------- */
+
+document.getElementById("accent").addEventListener("input", (e) => { state.accent = e.target.value; render(); });
+document.getElementById("topbarSw").addEventListener("click", () => { state.topbar = !state.topbar; render(); });
+document.getElementById("toggleTags").addEventListener("click", (e) => { const tv = document.getElementById("tv"); tv.classList.toggle("hide-tags"); e.target.textContent = tv.classList.contains("hide-tags") ? "Show slot tags" : "Hide slot tags"; });
+
+const pal = document.getElementById("palette");
+Object.entries(MODULES).forEach(([id, m]) => {
+  const c = document.createElement("span"); c.className = "chip"; c.textContent = m.label; c.draggable = true;
+  c.addEventListener("dragstart", (e) => { drag = { module: id }; e.dataTransfer.effectAllowed = "copy"; });
+  pal.appendChild(c);
+});
+
+const pr = document.getElementById("presets");
+Object.keys(PRESETS).forEach((name) => { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = name; b.addEventListener("click", () => { state = clone(PRESETS[name]); render(); toast(`${name} preset loaded`); }); pr.appendChild(b); });
+
+document.getElementById("copySpec").addEventListener("click", () => {
+  const ta = document.getElementById("spec");
+  navigator.clipboard.writeText(ta.value).then(() => toast("Spec copied")).catch(() => { ta.select(); toast("Select-all and copy"); });
+});
+document.getElementById("applySpec").addEventListener("click", () => {
+  try { const s = JSON.parse(document.getElementById("spec").value); if (!s.sections || !s.bottombar) throw new Error("missing sections"); state = s; render(); toast("Applied"); }
+  catch (e) { toast(`Couldn't apply: ${e.message}`); }
+});
+document.getElementById("resetSpec").addEventListener("click", () => { state = clone(PRESETS["Streaming"]); render(); toast("Reset to Streaming"); });
+
+render();
+})();
+</script>
