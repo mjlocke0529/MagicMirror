@@ -10,12 +10,12 @@ Module.register("MMM-SmartHomeTopBar", {
 		searchUrl: "https://www.google.com/search?q=",
 		links: [
 			{ name: "YouTube", url: "https://www.youtube.com/" },
-			{ name: "Traffic", url: "https://www.google.com/maps/@47.33,-122.58,11z/data=!5m1!1e1" },
+			{ name: "Traffic", url: "https://www.google.com/maps/@47.2529,-122.4443,11z/data=!5m1!1e1" },
 			{ name: "News", url: "https://news.google.com/" }
 		],
 		showWeather: true,
 		showTime: true,
-		weather: { lat: 47.3295, lon: -122.5801 },
+		weather: { lat: 47.25288, lon: -122.44429 },
 		units: "imperial"
 	},
 

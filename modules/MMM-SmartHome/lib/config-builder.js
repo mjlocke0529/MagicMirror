@@ -12,14 +12,14 @@ const DEFAULTS = {
 	version: 1,
 	adminPin: "1234",
 	general: { language: "en", locale: "en-US", timeFormat: 12, units: "imperial", adminLock: false },
-	weather: { label: "Gig Harbor, WA", lat: 47.3295, lon: -122.5801 },
+	weather: { label: "Tacoma, WA", lat: 47.25288, lon: -122.44429 },
 	hero: { tmdbApiKey: "", types: ["movie", "tv"], interval: 10000, region: "US" },
 	appearance: { theme: "tiles", accent: "#ffffff" },
 	topbar: {
 		greeting: true, name: "", search: true, showWeather: true, showTime: true,
 		links: [
 			{ name: "YouTube", url: "https://www.youtube.com/" },
-			{ name: "Traffic", url: "https://www.google.com/maps/@47.33,-122.58,11z/data=!5m1!1e1" },
+			{ name: "Traffic", url: "https://www.google.com/maps/@47.2529,-122.4443,11z/data=!5m1!1e1" },
 			{ name: "News", url: "https://news.google.com/" }
 		]
 	},
