@@ -204,6 +204,11 @@ Module.register("MMM-SmartHomeApps", {
 		this.showEmbedded(app);
 	},
 
+	guestScript () {
+		if (!this._guest) this._guest = fetch(this.file("guest.js")).then((r) => r.text());
+		return this._guest;
+	},
+
 	chromeUserAgent () {
 		return navigator.userAgent.replace(/\s?(Electron|MagicMirror)\/[\d.]+/gi, "");
 	},
@@ -243,27 +248,11 @@ Module.register("MMM-SmartHomeApps", {
 
 		// Keys pressed inside the guest never reach us, so the guest reports
 		// Back/Home via console.log, and handles play/pause for the remote.
-		// The guest page gets the same remote mapping; it reports back/home/settings via console.log.
+		// The guest page gets the remote mapping plus spatial navigation (guest.js);
+		// it reports back/home/settings to us via console.log.
 		view.addEventListener("dom-ready", () => {
 			const map = JSON.stringify(window.SHRemote ? window.SHRemote.current() : {});
-			view.executeJavaScript(`
-				if (!window.__smarthomeHook) {
-					window.__smarthomeHook = true;
-					const MAP = ${map};
-					const actionFor = (e) => { for (const [a, ks] of Object.entries(MAP)) if (ks.includes(e.key) || ks.includes(e.code)) return a; return null; };
-					document.addEventListener("keydown", (e) => {
-						const typing = e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName);
-						const a = actionFor(e);
-						if (a === "back" && !typing && !document.fullscreenElement) console.log("__SMARTHOME_BACK__");
-						else if (a === "home") console.log("__SMARTHOME_BACK__");
-						else if (a === "settings") console.log("__SMARTHOME_SETTINGS__");
-						else if (a === "playpause") {
-							const v = document.querySelector("video");
-							if (v) { v.paused ? v.play() : v.pause(); e.preventDefault(); }
-						}
-					}, true);
-				}
-			`).catch(() => {});
+			this.guestScript().then((src) => view.executeJavaScript(`const MAP = ${map};\n${src}`)).catch((error) => Log.warn(`${this.name}: guest script failed: ${error}`));
 		});
 		view.addEventListener("console-message", (event) => {
 			if (event.message === "__SMARTHOME_BACK__") this.closeEmbedded();
