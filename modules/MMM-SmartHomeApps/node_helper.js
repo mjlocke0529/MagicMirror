@@ -34,7 +34,52 @@ module.exports = NodeHelper.create({
 			case "SMARTHOME_OPEN_APP":
 				this.openApp(payload);
 				break;
+			case "SMARTHOME_SET_WEATHER_LOCATION":
+				if (!this.checkPin(payload.pin)) return;
+				this.setWeatherLocation(payload.query);
+				break;
 		}
+	},
+
+	/* ---------- weather location (geocode -> rewrite config.js -> relaunch) ---------- */
+
+	async setWeatherLocation (query) {
+		const reply = (ok, message, extra = {}) => this.sendSocketNotification("SMARTHOME_WEATHER_RESULT", { ok, message, ...extra });
+		try {
+			const url = `https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=${encodeURIComponent(query)}`;
+			const res = await fetch(url);
+			const data = await res.json();
+			const hit = data.results && data.results[0];
+			if (!hit) return reply(false, `No match for "${query}"`);
+
+			const label = [hit.name, hit.admin1, hit.country_code].filter(Boolean).join(", ");
+			const configPath = path.resolve(__dirname, "..", "..", "config", "config.js");
+			let config = fs.readFileSync(configPath, "utf8");
+			const before = config;
+			config = config.replace(/(\blat:\s*)-?\d+(\.\d+)?/g, `$1${hit.latitude}`).replace(/(\blon:\s*)-?\d+(\.\d+)?/g, `$1${hit.longitude}`);
+			if (config === before) return reply(false, "No lat/lon entries found in config.js");
+			fs.writeFileSync(configPath, config);
+			Log.log(`[${this.name}] weather location set to ${label} (${hit.latitude}, ${hit.longitude}); restarting`);
+			reply(true, `Weather set to ${label}. Restarting…`, { label });
+			setTimeout(() => this.relaunch(), 1500);
+		} catch (error) {
+			Log.error(`[${this.name}] weather location failed: ${error.message}`);
+			reply(false, error.message);
+		}
+	},
+
+	relaunch () {
+		try {
+			const { app } = require("electron");
+			if (app && app.relaunch) {
+				app.relaunch();
+				app.exit(0);
+				return;
+			}
+		} catch {
+			// not running under Electron (serveronly) - fall through
+		}
+		Log.warn(`[${this.name}] could not relaunch automatically; restart MagicMirror to apply the new weather location`);
 	},
 
 	checkPin (pin) {

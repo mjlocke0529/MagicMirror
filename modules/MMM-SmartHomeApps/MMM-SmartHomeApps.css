@@ -288,3 +288,45 @@
 	color: #ff6b6b;
 	font-size: 15px;
 }
+
+/* ---------- icons ---------- */
+
+.smarthome-app-tile.has-icon {
+	flex-direction: column;
+	gap: 8px;
+	height: 150px;
+}
+
+.smarthome-app-icon {
+	border-radius: 16px;
+	background: rgba(255, 255, 255, 0.92);
+	padding: 6px;
+	object-fit: contain;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.smarthome-app-tile.has-icon .smarthome-app-label {
+	font-size: 20px;
+}
+
+/* ---------- weather location form ---------- */
+
+.smarthome-weather-form {
+	display: flex;
+	gap: 8px;
+}
+
+.smarthome-weather-form input,
+.smarthome-weather-form button {
+	font-family: inherit;
+	font-size: 15px;
+	padding: 6px 10px;
+	border-radius: 6px;
+	border: 1px solid rgba(255, 255, 255, 0.3);
+	background: #111;
+	color: #fff;
+}
+
+.smarthome-weather-form input {
+	width: 240px;
+}

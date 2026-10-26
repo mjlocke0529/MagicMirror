@@ -16,6 +16,8 @@ Module.register("MMM-SmartHomeApps", {
 		browser: "Google Chrome", // external mode only
 		kiosk: true, // external mode only
 		backButtonTimeout: 3000,
+		showIcons: true, // show each site's own icon (app.icon, or fetched from the site's domain)
+		iconSize: 72,
 		apps: [
 			{ name: "Netflix", url: "https://www.netflix.com/browse", color: "#e50914" },
 			{ name: "Disney+", url: "https://www.disneyplus.com/home", color: "#0f3fa3" }
@@ -86,6 +88,7 @@ Module.register("MMM-SmartHomeApps", {
 			done.textContent = "Done";
 			done.addEventListener("click", () => this.leaveAdmin());
 			footer.appendChild(done);
+			footer.appendChild(this.renderWeatherForm());
 			const hint = document.createElement("span");
 			hint.className = "dimmed xsmall";
 			hint.textContent = "Admin mode: hidden apps are greyed out, locked apps need the PIN to open";
@@ -117,6 +120,18 @@ Module.register("MMM-SmartHomeApps", {
 		const label = document.createElement("span");
 		label.className = "smarthome-app-label";
 		label.textContent = app.name;
+
+		if (this.config.showIcons) {
+			const icon = document.createElement("img");
+			icon.className = "smarthome-app-icon";
+			icon.alt = "";
+			icon.width = this.config.iconSize;
+			icon.height = this.config.iconSize;
+			icon.src = this.iconFor(app);
+			icon.addEventListener("error", () => { icon.remove(); tile.classList.remove("has-icon"); });
+			tile.classList.add("has-icon");
+			tile.appendChild(icon);
+		}
 		tile.appendChild(label);
 
 		if (app.locked) {
@@ -150,6 +165,17 @@ Module.register("MMM-SmartHomeApps", {
 			});
 		}
 		return tile;
+	},
+
+	// The site's own icon: an explicit app.icon (URL or path), else the favicon for its domain.
+	iconFor (app) {
+		if (app.icon) return app.icon;
+		try {
+			const host = new URL(app.url).hostname;
+			return `https://www.google.com/s2/favicons?domain=${host}&sz=128`;
+		} catch {
+			return "";
+		}
 	},
 
 	controlButton (text, onClick, extraClass = "") {
@@ -197,6 +223,22 @@ Module.register("MMM-SmartHomeApps", {
 			this.saveState({ customApps: [...(this.state.customApps || []), { name: appName, url: url.value.trim(), color: color.value }] });
 		});
 		setTimeout(() => name.focus(), 50);
+		return form;
+	},
+
+	renderWeatherForm () {
+		const form = document.createElement("form");
+		form.className = "smarthome-weather-form";
+		const input = Object.assign(document.createElement("input"), { placeholder: "Weather location (city, state)", required: true });
+		const save = Object.assign(document.createElement("button"), { type: "submit", textContent: "Set weather" });
+		form.append(input, save);
+		form.addEventListener("submit", (event) => {
+			event.preventDefault();
+			this.touchAdmin();
+			this.status = `Looking up "${input.value.trim()}"…`;
+			this.sendSocketNotification("SMARTHOME_SET_WEATHER_LOCATION", { pin: this.adminPinCache, query: input.value.trim() });
+			this.updateDom(0);
+		});
 		return form;
 	},
 
@@ -397,6 +439,10 @@ Module.register("MMM-SmartHomeApps", {
 				this.closePin();
 				if (payload.purpose === "admin") this.enterAdmin(this.pendingPin);
 				else if (payload.purpose === "open" && payload.app) this.openApp(payload.app);
+				break;
+			case "SMARTHOME_WEATHER_RESULT":
+				this.status = payload.message;
+				this.updateDom(0);
 				break;
 			case "SMARTHOME_OPEN_APP_RESULT":
 				this.status = payload.ok ? null : `Couldn't open ${payload.name}: ${payload.error}`;
