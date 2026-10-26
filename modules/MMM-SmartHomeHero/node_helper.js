@@ -42,6 +42,7 @@ module.exports = NodeHelper.create({
 
 	async fetchAll ({ services, region, types, perService, ttl }) {
 		const apiKey = readApiKey();
+		Log.log(`[${this.name}] fetch: key ${apiKey ? "present" : "MISSING"}, services ${JSON.stringify(services)}, types ${JSON.stringify(types)}`);
 		if (!apiKey) {
 			this.sendSocketNotification("HERO_DATA", { error: "No TMDB API key set (Settings → Hero)" });
 			return;
@@ -87,6 +88,7 @@ module.exports = NodeHelper.create({
 			const lists = Object.values(byService);
 			for (let i = 0; lists.some((l) => l.length > i); i++) for (const l of lists) if (l[i]) mixed.push(l[i]);
 
+			Log.log(`[${this.name}] ${mixed.length} titles: ${mixed.slice(0, 4).map((i) => i.title).join(", ")}`);
 			this.cache = { key: cacheKey, at: Date.now(), items: mixed };
 			this.sendSocketNotification("HERO_DATA", { items: mixed });
 		} catch (error) {

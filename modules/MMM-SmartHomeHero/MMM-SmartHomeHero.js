@@ -68,6 +68,7 @@ Module.register("MMM-SmartHomeHero", {
 
 	socketNotificationReceived (notification, payload) {
 		if (notification !== "HERO_DATA") return;
+		Log.log(`[${this.name}] received ${payload.items ? payload.items.length : 0} titles${payload.error ? `, error: ${payload.error}` : ""}`);
 		this.error = payload.error || null;
 		if (payload.items && payload.items.length) {
 			this.items = payload.items;
