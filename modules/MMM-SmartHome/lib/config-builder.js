@@ -21,6 +21,15 @@ const DEFAULTS = {
 	weather: { label: "Tacoma, WA", lat: 47.25288, lon: -122.44429 },
 	hero: { tmdbApiKey: "", types: ["movie", "tv"], interval: 10000, region: "US" },
 	appearance: { theme: "tiles", accent: "#ffffff" },
+	// Remote / keyboard mapping: action -> list of event.key or event.code values
+	remote: {
+		back: ["Escape", "BrowserBack", "Backspace", "GoBack"],
+		home: ["Home", "BrowserHome"],
+		settings: ["ContextMenu", "F1", "BrowserSearch", "Menu", "LaunchApplication1"],
+		select: ["Enter"],
+		up: ["ArrowUp"], down: ["ArrowDown"], left: ["ArrowLeft"], right: ["ArrowRight"],
+		playpause: ["MediaPlayPause", "MediaPlay", "MediaPause"]
+	},
 	topbar: {
 		greeting: true, name: "", search: true, showWeather: true, showTime: true,
 		links: [
@@ -127,7 +136,7 @@ const loadSmartHome = (jsonPath) => {
 		try { fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2)); } catch { /* ignore */ }
 	}
 	const merged = { ...clone(DEFAULTS), ...data };
-	for (const key of ["general", "weather", "hero", "appearance", "topbar"]) merged[key] = { ...DEFAULTS[key], ...(data[key] || {}) };
+	for (const key of ["general", "weather", "hero", "appearance", "topbar", "remote"]) merged[key] = { ...DEFAULTS[key], ...(data[key] || {}) };
 	merged.layout = { ...clone(DEFAULTS.layout), ...(data.layout || {}) };
 	if (!Array.isArray(merged.layout.sections) || merged.layout.sections.length === 0) merged.layout.sections = clone(DEFAULTS.layout.sections);
 	if (!merged.layout.bottombar) merged.layout.bottombar = clone(DEFAULTS.layout.bottombar);

@@ -196,22 +196,23 @@ Module.register("MMM-SmartHomeTopBar", {
 		const items = this.items();
 		const active = document.activeElement;
 		const typing = active && active.tagName === "INPUT";
-		if (typing && !["Escape", "ArrowDown", "ArrowUp"].includes(event.key)) return; // let the search box have the keys
+		const action = window.SHRemote ? window.SHRemote.actionFor(event) : null;
+		if (typing && !["down", "up"].includes(action) && !(action === "back" && event.key !== "Backspace")) return; // let the search box have the keys
 
-		switch (event.key) {
-			case "ArrowRight": this.sel = Math.min(items.length - 1, this.sel + 1); this.applySelection(); break;
-			case "ArrowLeft": this.sel = Math.max(0, this.sel - 1); this.applySelection(); break;
-			case "Enter": {
+		switch (action) {
+			case "right": this.sel = Math.min(items.length - 1, this.sel + 1); this.applySelection(); break;
+			case "left": this.sel = Math.max(0, this.sel - 1); this.applySelection(); break;
+			case "select": {
 				const el = items[this.sel];
 				if (!el) return;
 				if (el.classList.contains("sh-tb-search")) el.querySelector("input").focus();
 				else el.click();
 				break;
 			}
-			case "ArrowUp": this.setFocus(false); this.sendNotification("SH_FOCUS_COG"); break;
-			case "ArrowDown": case "Escape": case "BrowserBack":
-				if (typing) { active.blur(); if (event.key !== "Escape") { this.setFocus(false); this.sendNotification("SH_FOCUS_DOWN", { from: "topbar" }); } }
-				else { this.setFocus(false); this.sendNotification("SH_FOCUS_DOWN", { from: "topbar" }); }
+			case "up": this.setFocus(false); this.sendNotification("SH_FOCUS_COG"); break;
+			case "down": case "back":
+				if (typing && action === "back") { active.blur(); }
+				else { if (typing) active.blur(); this.setFocus(false); this.sendNotification("SH_FOCUS_DOWN", { from: "topbar" }); }
 				break;
 			default: return;
 		}

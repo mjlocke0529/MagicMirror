@@ -46,6 +46,8 @@ Module.register("MMM-SmartHomeApps", {
 			this.openApp(app);
 		} else if (notification === "SH_FOCUS_RAIL") {
 			this.updateDom(0);
+		} else if (notification === "SH_HOME") {
+			this.closeEmbedded();
 		} else if (notification === "SH_OPEN_URL" && payload && payload.url) {
 			this.openApp({ name: payload.title ? `${payload.title} on ${payload.name}` : payload.name, url: payload.url });
 		}
@@ -165,22 +167,27 @@ Module.register("MMM-SmartHomeApps", {
 
 	onKey (event) {
 		if (this.shellBusy()) return;
+		const action = window.SHRemote ? window.SHRemote.actionFor(event) : null;
 
 		if (this.overlay) {
-			if (["Escape", "BrowserBack", "Backspace", "BrowserHome", "Home"].includes(event.key)) {
+			if (action === "back" || action === "home") {
 				event.preventDefault();
 				this.closeEmbedded();
+			} else if (action === "settings") {
+				event.preventDefault();
+				this.closeEmbedded();
+				this.sendNotification("SH_OPEN_SETTINGS");
 			}
 			return;
 		}
 
 		const apps = this.visibleApps();
 		if (!apps.length || this.hidden || this.offScreen()) return;
-		switch (event.key) {
-			case "ArrowRight": this.select(this.selected + 1); break;
-			case "ArrowLeft": this.select(this.selected - 1); break;
-			case "ArrowUp": this.sendNotification("SH_FOCUS_UP", { from: "rail" }); break;
-			case "Enter": if (document.activeElement === document.body || !document.activeElement) this.activate(apps[this.selected]); else return; break;
+		switch (action) {
+			case "right": this.select(this.selected + 1); break;
+			case "left": this.select(this.selected - 1); break;
+			case "up": this.sendNotification("SH_FOCUS_UP", { from: "rail" }); break;
+			case "select": if (document.activeElement === document.body || !document.activeElement) this.activate(apps[this.selected]); else return; break;
 			default: return;
 		}
 		event.preventDefault();
@@ -236,14 +243,21 @@ Module.register("MMM-SmartHomeApps", {
 
 		// Keys pressed inside the guest never reach us, so the guest reports
 		// Back/Home via console.log, and handles play/pause for the remote.
+		// The guest page gets the same remote mapping; it reports back/home/settings via console.log.
 		view.addEventListener("dom-ready", () => {
+			const map = JSON.stringify(window.SHRemote ? window.SHRemote.current() : {});
 			view.executeJavaScript(`
 				if (!window.__smarthomeHook) {
 					window.__smarthomeHook = true;
+					const MAP = ${map};
+					const actionFor = (e) => { for (const [a, ks] of Object.entries(MAP)) if (ks.includes(e.key) || ks.includes(e.code)) return a; return null; };
 					document.addEventListener("keydown", (e) => {
-						if ((e.key === "Escape" || e.key === "BrowserBack") && !document.fullscreenElement) console.log("__SMARTHOME_BACK__");
-						if (e.key === "BrowserHome" || e.key === "Home") console.log("__SMARTHOME_BACK__");
-						if (e.key === "MediaPlayPause" || e.key === "MediaPlay" || e.key === "MediaPause") {
+						const typing = e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName);
+						const a = actionFor(e);
+						if (a === "back" && !typing && !document.fullscreenElement) console.log("__SMARTHOME_BACK__");
+						else if (a === "home") console.log("__SMARTHOME_BACK__");
+						else if (a === "settings") console.log("__SMARTHOME_SETTINGS__");
+						else if (a === "playpause") {
 							const v = document.querySelector("video");
 							if (v) { v.paused ? v.play() : v.pause(); e.preventDefault(); }
 						}
@@ -253,6 +267,7 @@ Module.register("MMM-SmartHomeApps", {
 		});
 		view.addEventListener("console-message", (event) => {
 			if (event.message === "__SMARTHOME_BACK__") this.closeEmbedded();
+			if (event.message === "__SMARTHOME_SETTINGS__") { this.closeEmbedded(); this.sendNotification("SH_OPEN_SETTINGS"); }
 		});
 
 		let hideTimer = null;

@@ -249,3 +249,8 @@ body[data-sh-theme="fullwidth"] .sh-slot > .module:not(.sh-hero):not(.sh-apps):n
 body[data-sh-theme="fullwidth"] .sh-grid-bottom { padding: 0 36px 16px; }
 
 .sh-tile.selected, .sh-hero.focused, .sh-cog:focus-visible, .sh-panel .sh-focusable:focus { border-color: var(--sh-accent); }
+
+/* ---------- remote mapping ---------- */
+.sh-keys { margin: 0; font-size: 13px; max-width: 200px; white-space: normal; text-align: right; }
+.sh-btn.sh-learning { background: var(--sh-accent); color: #000; border-color: var(--sh-accent); animation: sh-pulse 1s ease-in-out infinite alternate; }
+@keyframes sh-pulse { from { opacity: 1; } to { opacity: 0.55; } }

@@ -184,12 +184,13 @@ Module.register("MMM-SmartHomeHero", {
 
 	onKey (event) {
 		if (!this.focused || this.shellBusy() || this.hidden || this.offScreen()) return;
-		switch (event.key) {
-			case "ArrowRight": this.step(1); break;
-			case "ArrowLeft": this.step(-1); break;
-			case "Enter": this.open(); break;
-			case "ArrowUp": this.setFocus(false); this.sendNotification("SH_FOCUS_UP", { from: "hero" }); break;
-			case "ArrowDown": case "Escape": case "BrowserBack": this.setFocus(false); this.sendNotification("SH_FOCUS_RAIL"); break;
+		const action = window.SHRemote ? window.SHRemote.actionFor(event) : null;
+		switch (action) {
+			case "right": this.step(1); break;
+			case "left": this.step(-1); break;
+			case "select": this.open(); break;
+			case "up": this.setFocus(false); this.sendNotification("SH_FOCUS_UP", { from: "hero" }); break;
+			case "down": case "back": this.setFocus(false); this.sendNotification("SH_FOCUS_RAIL"); break;
 			default: return;
 		}
 		event.preventDefault();

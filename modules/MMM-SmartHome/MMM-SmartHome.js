@@ -71,6 +71,9 @@ Module.register("MMM-SmartHome", {
 			this.routeFocus(1, (payload && payload.from) || "cog");
 		} else if (notification === "SH_OPEN_SETTINGS") {
 			this.openSettings();
+		} else if (notification === "SH_HOME") {
+			this.closePin();
+			this.closePanel();
 		}
 	},
 
@@ -79,6 +82,7 @@ Module.register("MMM-SmartHome", {
 			case "SH_STATE": {
 				const prev = this.state;
 				this.state = payload;
+				window.SHRemote.map = { ...window.SHRemote.defaults, ...(payload.remote || {}) };
 				this.sendNotification("SH_STATE", payload);
 				if (this.domReady) {
 					if (prev) this.applyLive(prev, payload);
@@ -349,11 +353,11 @@ Module.register("MMM-SmartHome", {
 		cancel.textContent = "Cancel";
 		cancel.addEventListener("click", () => this.closePin());
 		dialog.querySelector(".sh-pin-card").appendChild(cancel);
-		dialog.onKey = (event) => {
+		dialog.onKey = (event, action) => {
 			if (/^[0-9]$/.test(event.key)) { if (entered.length < 8) entered += event.key; render(); return true; }
 			if (event.key === "Backspace") { entered = entered.slice(0, -1); render(); return true; }
-			if (event.key === "Enter" && !(document.activeElement && keys.contains(document.activeElement))) { submit(); return true; }
-			if (event.key === "Escape" || event.key === "BrowserBack") { this.closePin(); return true; }
+			if (action === "select" && !(document.activeElement && keys.contains(document.activeElement))) { submit(); return true; }
+			if (action === "back" || action === "home") { this.closePin(); return true; }
 			return false;
 		};
 		dialog.showError = (msg) => { dialog.querySelector(".sh-pin-error").textContent = msg; entered = ""; render(); };
@@ -384,7 +388,7 @@ Module.register("MMM-SmartHome", {
 			<div class="sh-panel-body"></div>`;
 		panel.querySelector(".sh-panel-close").addEventListener("click", () => this.closePanel());
 		const nav = panel.querySelector(".sh-panel-nav");
-		[["layout", "Layout"], ["apps", "Apps"], ["theme", "Theme"], ["hero", "Hero"], ["weather", "Weather"], ["system", "System"]].forEach(([id, label]) => {
+		[["layout", "Layout"], ["apps", "Apps"], ["theme", "Theme"], ["hero", "Hero"], ["weather", "Weather"], ["remote", "Remote"], ["system", "System"]].forEach(([id, label]) => {
 			const b = document.createElement("button");
 			b.type = "button";
 			b.className = "sh-nav sh-focusable";
@@ -422,7 +426,7 @@ Module.register("MMM-SmartHome", {
 		const prevFocus = sameSection ? [...body.querySelectorAll(".sh-focusable")].indexOf(document.activeElement) : -1;
 		body.dataset.section = this.section;
 		body.innerHTML = "";
-		const builders = { layout: this.sectionLayout, apps: this.sectionApps, theme: this.sectionTheme, hero: this.sectionHero, weather: this.sectionWeather, system: this.sectionSystem };
+		const builders = { layout: this.sectionLayout, apps: this.sectionApps, theme: this.sectionTheme, hero: this.sectionHero, weather: this.sectionWeather, remote: this.sectionRemote, system: this.sectionSystem };
 		builders[this.section].call(this, body);
 		if (sameSection) {
 			body.scrollTop = scroll;
@@ -672,6 +676,39 @@ Module.register("MMM-SmartHome", {
 		body.appendChild(this.row("Clock", this.cycler([{ value: 12, label: "12-hour" }, { value: 24, label: "24-hour" }], general.timeFormat, (v) => { general.timeFormat = v; this.save({ general }); })));
 	},
 
+	sectionRemote (body) {
+		const remote = JSON.parse(JSON.stringify(window.SHRemote.current()));
+		body.appendChild(this.note("Press Learn, then the button on your remote. Several keys can map to one action; Reset restores the defaults for that action."));
+		window.SHRemote.ACTIONS.forEach(([action, label]) => {
+			const keys = this.note((remote[action] || []).join(" · ") || "—");
+			keys.className = "sh-keys";
+			const learn = this.button(this.learning === action ? "Press a button…" : "Learn", () => {
+				this.learning = action;
+				this.toast(`Press the remote button for "${label}"`);
+				this.renderSection();
+			}, this.learning === action ? "sh-learning" : "");
+			const reset = this.button("Reset", () => {
+				remote[action] = [...window.SHRemote.defaults[action]];
+				this.save({ remote });
+			}, "sh-small");
+			body.appendChild(this.row(label, keys, learn, reset));
+		});
+		body.appendChild(this.note("Inside Netflix / Disney+, Back leaves fullscreen video first and exits the app on the next press; Home always exits."));
+	},
+
+	learnKey (event) {
+		const action = this.learning;
+		this.learning = null;
+		const key = window.SHRemote.keyOf(event);
+		if (!key) return;
+		const remote = JSON.parse(JSON.stringify(window.SHRemote.current()));
+		// one key belongs to one action
+		for (const a of Object.keys(remote)) remote[a] = (remote[a] || []).filter((k) => k !== key);
+		remote[action] = [key, ...(remote[action] || [])];
+		this.save({ remote });
+		this.toast(`"${key}" → ${action}`);
+	},
+
 	sectionSystem (body) {
 		const general = { ...this.state.general };
 		body.appendChild(this.row("Admin lock (PIN)", this.toggle(general.adminLock === true, (v) => {
@@ -775,10 +812,18 @@ Module.register("MMM-SmartHome", {
 	},
 
 	onKey (event) {
+		if (this.learning && this.panel) {
+			event.preventDefault(); event.stopPropagation();
+			this.learnKey(event);
+			return;
+		}
+		const action = window.SHRemote.actionFor(event);
+		const dirKey = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" }[action];
+
 		if (this.pinDialog) {
-			if (this.pinDialog.onKey(event)) { event.preventDefault(); event.stopPropagation(); return; }
-			if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
-				this.moveFocus(this.pinDialog, event.key, 3);
+			if (this.pinDialog.onKey(event, action)) { event.preventDefault(); event.stopPropagation(); return; }
+			if (dirKey) {
+				this.moveFocus(this.pinDialog, dirKey, 3);
 				event.preventDefault(); event.stopPropagation();
 			}
 			return;
@@ -787,22 +832,33 @@ Module.register("MMM-SmartHome", {
 			this.touchAdmin();
 			const active = document.activeElement;
 			const inInput = active && active.tagName === "INPUT" && active.type !== "color";
-			if (event.key === "Escape" || event.key === "BrowserBack") { this.closePanel(); }
-			else if (event.key === "ArrowUp" || event.key === "ArrowDown") { this.moveFocus(this.panel, event.key); }
-			else if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && !inInput) {
-				if (active && active.classList.contains("sh-nav")) this.moveFocus(this.panel.querySelector(".sh-panel-nav"), event.key === "ArrowLeft" ? "ArrowUp" : "ArrowDown");
-				else if (active && active.stepLeft) (event.key === "ArrowLeft" ? active.stepLeft : active.stepRight)();
+			if (inInput && !["up", "down"].includes(action) && !(action === "back" && event.key !== "Backspace")) return; // let typing through
+			if (action === "back" || action === "settings" || action === "home") { this.closePanel(); if (action === "home") this.sendNotification("SH_HOME"); }
+			else if (action === "up" || action === "down") { this.moveFocus(this.panel, dirKey); }
+			else if (action === "left" || action === "right") {
+				if (active && active.classList.contains("sh-nav")) this.moveFocus(this.panel.querySelector(".sh-panel-nav"), action === "left" ? "ArrowUp" : "ArrowDown");
+				else if (active && active.stepLeft) (action === "left" ? active.stepLeft : active.stepRight)();
 				else if (active && active.dataset.cycle) active.click();
-				else this.moveFocus(this.panel, event.key === "ArrowLeft" ? "ArrowUp" : "ArrowDown");
+				else this.moveFocus(this.panel, action === "left" ? "ArrowUp" : "ArrowDown");
 			}
-			else if (event.key === "Enter" && active && active.classList.contains("sh-focusable") && !inInput) { active.click(); }
+			else if (action === "select" && active && active.classList.contains("sh-focusable")) { active.click(); }
 			else return;
 			event.preventDefault(); event.stopPropagation();
 			return;
 		}
+		// nothing of ours open
+		if (action === "settings" && !document.body.classList.contains("sh-overlay-open")) {
+			this.openSettings();
+			event.preventDefault(); event.stopPropagation();
+			return;
+		}
+		if (action === "home") {
+			this.sendNotification("SH_HOME");
+			return;
+		}
 		if (this.cog && document.activeElement === this.cog) {
-			if (event.key === "Enter") { this.openSettings(); event.preventDefault(); }
-			else if (event.key === "ArrowDown" || event.key === "Escape" || event.key === "BrowserBack") { this.cog.blur(); this.routeFocus(1, "cog"); event.preventDefault(); }
+			if (action === "select") { this.openSettings(); event.preventDefault(); }
+			else if (action === "down" || action === "back") { this.cog.blur(); this.routeFocus(1, "cog"); event.preventDefault(); }
 			event.stopPropagation();
 		}
 	},

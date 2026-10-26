@@ -4,7 +4,7 @@ const Log = require("logger");
 const { loadSmartHome, saveSmartHome } = require("./lib/config-builder");
 
 const JSON_PATH = path.resolve(__dirname, "..", "..", "config", "smarthome.json");
-const ALLOWED = ["apps", "modules", "weather", "general", "hero", "appearance", "topbar", "layout"];
+const ALLOWED = ["apps", "modules", "weather", "general", "hero", "appearance", "topbar", "layout", "remote"];
 
 module.exports = NodeHelper.create({
 	start () {
