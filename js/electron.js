@@ -56,6 +56,7 @@ const createWindow = () => {
 		webPreferences: {
 			contextIsolation: true,
 			nodeIntegration: false,
+			webviewTag: true, // SmartHome: allow modules to embed sites (e.g. streaming apps) in <webview>
 			zoomFactor: config.zoom
 		},
 		backgroundColor: "#000000",
@@ -194,11 +195,30 @@ app.on("certificate-error", (event, webContents, url, error, certificate, callba
 });
 
 /**
+ * SmartHome: when running on the castLabs Electron build, make sure the
+ * Widevine CDM component is installed before any window is created so
+ * DRM-protected streaming (Netflix, Disney+, ...) can play in <webview>.
+ */
+const waitForWidevine = async () => {
+	if (!electron.components) {
+		Log.warn("Widevine components API not available (stock Electron?) - DRM streaming will not work.");
+		return;
+	}
+	try {
+		await electron.components.whenReady();
+		Log.log(`Widevine components ready: ${JSON.stringify(electron.components.status())}`);
+	} catch (error) {
+		Log.error(`Widevine components failed to load: ${error}`);
+	}
+};
+
+/**
  * Bootstrap Electron: launch the client-only viewer and/or the full core application.
  */
 const bootstrapElectron = async () => {
 	if (process.env.clientonly) {
 		await app.whenReady();
+		await waitForWidevine();
 		Log.log("Launching client viewer application.");
 		createWindow();
 	}
@@ -210,6 +230,7 @@ const bootstrapElectron = async () => {
 	if (["localhost", "127.0.0.1", "::1", "::ffff:127.0.0.1", undefined].includes(config.address)) {
 		config = await core.start();
 		await app.whenReady();
+		await waitForWidevine();
 		Log.log("Launching application.");
 		createWindow();
 	}
