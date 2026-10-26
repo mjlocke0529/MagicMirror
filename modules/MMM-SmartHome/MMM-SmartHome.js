@@ -38,6 +38,7 @@ Module.register("MMM-SmartHome", {
 		if (notification === "DOM_OBJECTS_CREATED") {
 			this.buildChrome();
 			this.hideDisabledModules();
+			if (this.state) this.applyAppearance(this.state.appearance);
 			if (this.state) this.sendNotification("SH_STATE", this.state);
 		} else if (notification === "SH_REQUEST_PIN" && sender) {
 			// another module wants the PIN entered (e.g. a locked app)
@@ -47,12 +48,9 @@ Module.register("MMM-SmartHome", {
 			this.showCog();
 			this.cog.focus();
 		} else if (notification === "SH_FOCUS_UP") {
-			// from the rail: hero if it's on screen, else the cog
-			if (this.moduleVisible("hero")) this.sendNotification("SH_FOCUS_HERO");
-			else { this.showCog(); this.cog.focus(); }
+			this.routeFocus(-1, (payload && payload.from) || "rail");
 		} else if (notification === "SH_FOCUS_DOWN") {
-			if (this.moduleVisible("hero")) this.sendNotification("SH_FOCUS_HERO");
-			else this.sendNotification("SH_FOCUS_RAIL");
+			this.routeFocus(1, (payload && payload.from) || "cog");
 		} else if (notification === "SH_OPEN_SETTINGS") {
 			this.openSettings();
 		}
@@ -65,6 +63,7 @@ Module.register("MMM-SmartHome", {
 				this.state = payload;
 				this.sendNotification("SH_STATE", payload);
 				if (prev) this.applyLive(prev, payload);
+				else if (document.body.dataset) this.applyAppearance(payload.appearance);
 				if (this.panel) this.renderSection();
 				break;
 			}
@@ -208,7 +207,7 @@ Module.register("MMM-SmartHome", {
 			<div class="sh-panel-body"></div>`;
 		panel.querySelector(".sh-panel-close").addEventListener("click", () => this.closePanel());
 		const nav = panel.querySelector(".sh-panel-nav");
-		[["apps", "Apps"], ["layout", "Layout"], ["hero", "Hero"], ["weather", "Weather"], ["system", "System"]].forEach(([id, label]) => {
+		[["apps", "Apps"], ["layout", "Layout"], ["theme", "Theme"], ["hero", "Hero"], ["weather", "Weather"], ["system", "System"]].forEach(([id, label]) => {
 			const b = document.createElement("button");
 			b.type = "button";
 			b.className = "sh-nav sh-focusable";
@@ -240,7 +239,7 @@ Module.register("MMM-SmartHome", {
 		this.panel.querySelectorAll(".sh-nav").forEach((b) => b.classList.toggle("active", b.dataset.section === this.section));
 		const body = this.panel.querySelector(".sh-panel-body");
 		body.innerHTML = "";
-		const builders = { apps: this.sectionApps, layout: this.sectionLayout, hero: this.sectionHero, weather: this.sectionWeather, system: this.sectionSystem };
+		const builders = { apps: this.sectionApps, layout: this.sectionLayout, theme: this.sectionTheme, hero: this.sectionHero, weather: this.sectionWeather, system: this.sectionSystem };
 		builders[this.section].call(this, body);
 		const first = body.querySelector(".sh-focusable");
 		if (first && !(document.activeElement && this.panel.querySelector(".sh-panel-nav").contains(document.activeElement))) first.focus();
@@ -373,6 +372,43 @@ Module.register("MMM-SmartHome", {
 		});
 	},
 
+	sectionTheme (body) {
+		const appearance = { ...this.state.appearance };
+		const themes = [{ value: "tiles", label: "Tiles" }, { value: "nospacing", label: "No spacing" }, { value: "fullwidth", label: "Full width" }];
+		body.appendChild(this.row("Theme", this.cycler(themes, appearance.theme, (v) => { appearance.theme = v; this.save({ appearance }); })));
+		const accent = this.input("", "color", appearance.accent || "#ffffff");
+		accent.addEventListener("change", () => { appearance.accent = accent.value; this.save({ appearance }); });
+		body.appendChild(this.row("Accent color", accent));
+		body.appendChild(this.note("Tiles: modules in cards with gaps · No spacing: cards edge to edge · Full width: no margins, hero to the top edge, top bar floating over it."));
+
+		const tb = { ...this.state.topbar, links: [...(this.state.topbar.links || [])] };
+		const commit = () => this.save({ topbar: tb });
+		body.appendChild(this.note("Top bar"));
+		body.appendChild(this.row("Greeting", this.toggle(tb.greeting !== false, (v) => { tb.greeting = v; commit(); })));
+		const name = this.input("Name for the greeting (e.g. Locke family)", "text", tb.name || "");
+		name.addEventListener("change", () => { tb.name = name.value.trim(); commit(); });
+		body.appendChild(this.row("Greet as", name));
+		body.appendChild(this.row("Search box", this.toggle(tb.search !== false, (v) => { tb.search = v; commit(); })));
+		body.appendChild(this.row("Weather chip", this.toggle(tb.showWeather !== false, (v) => { tb.showWeather = v; commit(); })));
+		body.appendChild(this.row("Time", this.toggle(tb.showTime !== false, (v) => { tb.showTime = v; commit(); })));
+
+		body.appendChild(this.note("Quick links"));
+		tb.links.forEach((link, i) => {
+			body.appendChild(this.row(link.name, this.button("Remove", () => { tb.links.splice(i, 1); commit(); }, "sh-danger sh-small")));
+		});
+		const ln = this.input("Name");
+		const lu = this.input("https://…", "url");
+		const add = this.button("Add link", () => {
+			if (!ln.value.trim() || !lu.value.trim()) return this.toast("Name and URL are required", false);
+			tb.links.push({ name: ln.value.trim(), url: lu.value.trim() });
+			commit();
+		});
+		const form = document.createElement("div");
+		form.className = "sh-form";
+		form.append(ln, lu, add);
+		body.appendChild(form);
+	},
+
 	sectionHero (body) {
 		const hero = { ...this.state.hero };
 		body.appendChild(this.note("Trending titles come from TMDB (themoviedb.org). Services follow the apps in your rail."));
@@ -461,6 +497,13 @@ Module.register("MMM-SmartHome", {
 		if (w0.lat !== w1.lat || w0.lon !== w1.lon) this.applyWeather(w1);
 
 		if (JSON.stringify(prev.hero) !== JSON.stringify(next.hero)) this.sendNotification("SH_HERO_CONFIG", next.hero);
+		this.applyAppearance(next.appearance);
+	},
+
+	applyAppearance (appearance) {
+		const a = appearance || {};
+		document.body.dataset.shTheme = a.theme || "tiles";
+		document.documentElement.style.setProperty("--sh-accent", a.accent || "#ffffff");
 	},
 
 	applyGeneral (general) {
@@ -496,6 +539,23 @@ Module.register("MMM-SmartHome", {
 	},
 
 	/* ---------- live layout changes ---------- */
+
+	// Vertical focus order for the remote. Skips anything that's hidden.
+	focusChain: ["cog", "topbar", "hero", "rail"],
+
+	routeFocus (dir, from) {
+		const chain = this.focusChain;
+		let i = chain.indexOf(from);
+		if (i === -1) i = dir > 0 ? -1 : chain.length;
+		for (let n = i + dir; n >= 0 && n < chain.length; n += dir) {
+			const id = chain[n];
+			const ok = id === "cog" ? true : this.moduleVisible(id === "rail" ? "apps" : id);
+			if (!ok) continue;
+			if (id === "cog") { this.showCog(); this.cog.focus(); }
+			else this.sendNotification(`SH_FOCUS_${id.toUpperCase()}`);
+			return;
+		}
+	},
 
 	moduleVisible (id) {
 		const m = this.findModule(id);
@@ -555,7 +615,7 @@ Module.register("MMM-SmartHome", {
 		// nothing of ours open: let the cog be reachable from the remote
 		if (this.cog && document.activeElement === this.cog) {
 			if (event.key === "Enter") { this.openSettings(); event.preventDefault(); }
-			else if (event.key === "ArrowDown" || event.key === "Escape" || event.key === "BrowserBack") { this.cog.blur(); this.sendNotification("SH_FOCUS_DOWN"); event.preventDefault(); }
+			else if (event.key === "ArrowDown" || event.key === "Escape" || event.key === "BrowserBack") { this.cog.blur(); this.routeFocus(1, "cog"); event.preventDefault(); }
 			event.stopPropagation();
 		}
 	},

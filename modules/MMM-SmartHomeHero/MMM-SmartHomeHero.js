@@ -182,7 +182,7 @@ Module.register("MMM-SmartHomeHero", {
 			case "ArrowRight": this.step(1); break;
 			case "ArrowLeft": this.step(-1); break;
 			case "Enter": this.open(); break;
-			case "ArrowUp": this.setFocus(false); this.sendNotification("SH_FOCUS_COG"); break;
+			case "ArrowUp": this.setFocus(false); this.sendNotification("SH_FOCUS_UP", { from: "hero" }); break;
 			case "ArrowDown": case "Escape": case "BrowserBack": this.setFocus(false); this.sendNotification("SH_FOCUS_RAIL"); break;
 			default: return;
 		}

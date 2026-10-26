@@ -174,7 +174,7 @@ Module.register("MMM-SmartHomeApps", {
 		switch (event.key) {
 			case "ArrowRight": this.select(this.selected + 1); break;
 			case "ArrowLeft": this.select(this.selected - 1); break;
-			case "ArrowUp": this.sendNotification("SH_FOCUS_UP"); break;
+			case "ArrowUp": this.sendNotification("SH_FOCUS_UP", { from: "rail" }); break;
 			case "Enter": if (document.activeElement === document.body || !document.activeElement) this.activate(apps[this.selected]); else return; break;
 			default: return;
 		}

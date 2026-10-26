@@ -88,3 +88,4 @@ tests/**/.tmp/
 !/config/smarthome.json.sample
 !/modules/MMM-SmartHome/
 !/modules/MMM-SmartHomeHero/
+!/modules/MMM-SmartHomeTopBar/

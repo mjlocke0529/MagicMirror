@@ -204,3 +204,63 @@
 
 /* modules flagged off at boot stay invisible until the shell locks them hidden */
 .module.sh-off { visibility: hidden; }
+
+/* ---------- themes ---------- */
+
+:root { --sh-accent: #ffffff; }
+
+/* Tiles: each regular module sits in a card */
+body[data-sh-theme="tiles"] .module:not(.sh-core):not(.sh-hero):not(.sh-apps):not(.sh-topbar):not(.alert):not(.updatenotification) {
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 18px;
+	padding: 18px 22px;
+	margin-bottom: 14px;
+}
+
+/* No spacing: cards edge to edge, no rounding, no body margins between them */
+body[data-sh-theme="nospacing"] .module:not(.sh-core):not(.sh-hero):not(.sh-apps):not(.sh-topbar):not(.alert):not(.updatenotification) {
+	background: rgba(255, 255, 255, 0.05);
+	border: 0;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 0;
+	padding: 16px 20px;
+	margin: 0;
+}
+body[data-sh-theme="nospacing"] .sh-hero { border-radius: 0; }
+body[data-sh-theme="nospacing"] .sh-tile { border-radius: 0; }
+body[data-sh-theme="nospacing"] .sh-rail { gap: 10px; padding-top: 14px; padding-bottom: 14px; }
+
+/* Full width: no page margins, hero bleeds to the top, top bar floats over it */
+body[data-sh-theme="fullwidth"] {
+	--gap-body-top: 0px;
+	--gap-body-right: 0px;
+	--gap-body-bottom: 0px;
+	--gap-body-left: 0px;
+}
+body[data-sh-theme="fullwidth"] .region.top.bar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 5;
+	padding: 18px 36px 40px;
+	background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.45) 60%, transparent 100%);
+	pointer-events: none;
+}
+body[data-sh-theme="fullwidth"] .region.top.bar * { pointer-events: auto; }
+body[data-sh-theme="fullwidth"] .sh-hero {
+	border-radius: 0;
+	border-left: 0;
+	border-right: 0;
+	border-top: 0;
+	height: 52vh;
+}
+body[data-sh-theme="fullwidth"] .sh-hero-meta { bottom: 56px; left: 56px; }
+body[data-sh-theme="fullwidth"] .region.upper.third { margin-top: 0; }
+body[data-sh-theme="fullwidth"] .region.middle.center,
+body[data-sh-theme="fullwidth"] .region.lower.third,
+body[data-sh-theme="fullwidth"] .region.bottom.bar { padding-left: 36px; padding-right: 36px; }
+
+/* accent used for focus rings everywhere */
+.sh-tile.selected, .sh-hero.focused, .sh-cog:focus-visible, .sh-panel .sh-focusable:focus { border-color: var(--sh-accent); }

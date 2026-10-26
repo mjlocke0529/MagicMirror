@@ -14,11 +14,21 @@ const DEFAULTS = {
 	general: { language: "en", locale: "en-US", timeFormat: 12, units: "imperial", adminLock: false },
 	weather: { label: "Gig Harbor, WA", lat: 47.3295, lon: -122.5801 },
 	hero: { tmdbApiKey: "", types: ["movie", "tv"], interval: 10000, region: "US" },
+	appearance: { theme: "tiles", accent: "#ffffff" },
+	topbar: {
+		greeting: true, name: "", search: true, showWeather: true, showTime: true,
+		links: [
+			{ name: "YouTube", url: "https://www.youtube.com/" },
+			{ name: "Traffic", url: "https://www.google.com/maps/@47.33,-122.58,11z/data=!5m1!1e1" },
+			{ name: "News", url: "https://news.google.com/" }
+		]
+	},
 	apps: [
 		{ name: "Netflix", url: "https://www.netflix.com/browse", color: "#e50914", hidden: false, locked: false },
 		{ name: "Disney+", url: "https://www.disneyplus.com/home", color: "#0f3fa3", hidden: false, locked: false }
 	],
 	modules: [
+		{ id: "topbar", name: "Top bar", module: "MMM-SmartHomeTopBar", position: "top_bar", enabled: true },
 		{ id: "hero", name: "Trending (hero)", module: "MMM-SmartHomeHero", position: "upper_third", enabled: true },
 		{ id: "apps", name: "Apps", module: "MMM-SmartHomeApps", position: "middle_center", enabled: true },
 		{ id: "clock", name: "Clock", module: "clock", position: "top_left", enabled: true },
@@ -57,6 +67,8 @@ const loadSmartHome = (jsonPath) => {
 	merged.general = { ...DEFAULTS.general, ...(data.general || {}) };
 	merged.weather = { ...DEFAULTS.weather, ...(data.weather || {}) };
 	merged.hero = { ...DEFAULTS.hero, ...(data.hero || {}) };
+	merged.appearance = { ...DEFAULTS.appearance, ...(data.appearance || {}) };
+	merged.topbar = { ...DEFAULTS.topbar, ...(data.topbar || {}) };
 	if (!Array.isArray(merged.modules) || merged.modules.length === 0) merged.modules = clone(DEFAULTS.modules);
 	for (const def of DEFAULTS.modules) {
 		if (!merged.modules.some((m) => m.id === def.id)) merged.modules.push(clone(def));
@@ -86,6 +98,9 @@ const buildConfig = (sh) => {
 		}
 		if (entry.module === "MMM-SmartHomeApps") {
 			config.apps = clone(sh.apps);
+		}
+		if (entry.module === "MMM-SmartHomeTopBar") {
+			Object.assign(config, clone(sh.topbar), { weather: clone(sh.weather), units: sh.general.units });
 		}
 		if (entry.module === "MMM-SmartHomeHero") {
 			const { tmdbApiKey, ...hero } = sh.hero; // the key stays in the helper

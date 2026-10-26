@@ -79,7 +79,7 @@ module.exports = NodeHelper.create({
 			return;
 		}
 		const data = this.load();
-		const allowed = ["apps", "modules", "weather", "general", "hero"];
+		const allowed = ["apps", "modules", "weather", "general", "hero", "appearance", "topbar"];
 		for (const key of Object.keys(patch || {})) {
 			if (!allowed.includes(key)) continue;
 			if (key === "hero") {
