@@ -29,7 +29,19 @@ Module.register("MMM-SmartHomeHero", {
 		document.addEventListener("keydown", (e) => this.onKey(e));
 		this.fetch();
 		setInterval(() => this.fetch(), this.config.refresh);
+		this.startSlider();
+	},
+
+	startSlider () {
+		clearInterval(this.timer);
 		this.timer = setInterval(() => { if (!this.focused && !this.overlayOpen()) this.step(1); }, this.config.interval);
+	},
+
+	// live settings change from the shell (types, interval, key saved server-side)
+	reconfigure (hero) {
+		Object.assign(this.config, { types: hero.types, interval: hero.interval, region: hero.region || this.config.region });
+		this.startSlider();
+		this.fetch();
 	},
 
 	servicesFromApps () {
@@ -46,7 +58,6 @@ Module.register("MMM-SmartHomeHero", {
 	fetch () {
 		const services = Array.isArray(this.config.services) ? this.config.services : this.servicesFromApps();
 		this.sendSocketNotification("HERO_FETCH", {
-			apiKey: this.config.tmdbApiKey,
 			services,
 			region: this.config.region,
 			types: this.config.types,
@@ -70,6 +81,8 @@ Module.register("MMM-SmartHomeHero", {
 		if (notification === "SH_STATE" && payload && Array.isArray(payload.apps)) {
 			this.apps = payload.apps;
 			this.fetch();
+		} else if (notification === "SH_HERO_CONFIG" && payload) {
+			this.reconfigure(payload);
 		} else if (notification === "SH_FOCUS_HERO") {
 			this.setFocus(true);
 		} else if (notification === "SMARTHOME_APP_OPENED" || notification === "SH_FOCUS_RAIL" || notification === "SH_FOCUS_COG") {

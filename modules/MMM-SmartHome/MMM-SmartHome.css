@@ -201,3 +201,6 @@
 	border-color: #fff;
 	box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
 }
+
+/* modules flagged off at boot stay invisible until the shell locks them hidden */
+.module.sh-off { visibility: hidden; }

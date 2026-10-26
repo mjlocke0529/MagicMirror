@@ -2,8 +2,19 @@
  * streaming provider (Netflix, Disney+, ...) and returns them with backdrops.
  * Data: https://www.themoviedb.org  (this product uses the TMDB API but is not endorsed or certified by TMDB)
  */
+const fs = require("node:fs");
+const path = require("node:path");
 const NodeHelper = require("node_helper");
 const Log = require("logger");
+
+const SETTINGS = path.resolve(__dirname, "..", "..", "config", "smarthome.json");
+const readApiKey = () => {
+	try {
+		return (JSON.parse(fs.readFileSync(SETTINGS, "utf8")).hero || {}).tmdbApiKey || "";
+	} catch {
+		return "";
+	}
+};
 
 const TMDB = "https://api.themoviedb.org/3";
 const IMG = "https://image.tmdb.org/t/p";
@@ -29,12 +40,13 @@ module.exports = NodeHelper.create({
 		if (notification === "HERO_FETCH") this.fetchAll(payload);
 	},
 
-	async fetchAll ({ apiKey, services, region, types, perService, ttl }) {
+	async fetchAll ({ services, region, types, perService, ttl }) {
+		const apiKey = readApiKey();
 		if (!apiKey) {
 			this.sendSocketNotification("HERO_DATA", { error: "No TMDB API key set (Settings → Hero)" });
 			return;
 		}
-		const cacheKey = JSON.stringify({ services, region, types, perService });
+		const cacheKey = JSON.stringify({ services, region, types, perService, apiKey });
 		if (this.cache.key === cacheKey && Date.now() - this.cache.at < ttl) {
 			this.sendSocketNotification("HERO_DATA", { items: this.cache.items });
 			return;

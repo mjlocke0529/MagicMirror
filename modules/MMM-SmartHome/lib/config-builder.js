@@ -88,14 +88,16 @@ const buildConfig = (sh) => {
 			config.apps = clone(sh.apps);
 		}
 		if (entry.module === "MMM-SmartHomeHero") {
-			Object.assign(config, clone(sh.hero), { apps: clone(sh.apps) });
+			const { tmdbApiKey, ...hero } = sh.hero; // the key stays in the helper
+			Object.assign(config, clone(hero), { apps: clone(sh.apps) });
 		}
+		// Every module loads; disabled ones start hidden (sh-off) so they can be
+		// switched on live from the settings panel without a restart.
 		modules.push({
 			module: entry.module,
 			position,
 			header: entry.header,
-			classes: `sh-${entry.id}`,
-			disabled: entry.enabled === false,
+			classes: `sh-${entry.id}${entry.enabled === false ? " sh-off" : ""}`,
 			config
 		});
 	}

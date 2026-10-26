@@ -116,8 +116,7 @@ module.exports = NodeHelper.create({
 			data.weather = { label, lat: hit.latitude, lon: hit.longitude };
 			this.save(data);
 			this.broadcast();
-			this.sendSocketNotification("SH_TOAST", { ok: true, message: `Weather set to ${label}. Restarting…` });
-			setTimeout(() => this.relaunch(), 1200);
+			this.sendSocketNotification("SH_TOAST", { ok: true, message: `Weather set to ${label}` });
 		} catch (error) {
 			this.sendSocketNotification("SH_TOAST", { ok: false, message: error.message });
 		}

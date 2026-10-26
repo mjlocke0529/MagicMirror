@@ -37,6 +37,7 @@ Module.register("MMM-SmartHome", {
 	notificationReceived (notification, payload, sender) {
 		if (notification === "DOM_OBJECTS_CREATED") {
 			this.buildChrome();
+			this.hideDisabledModules();
 			if (this.state) this.sendNotification("SH_STATE", this.state);
 		} else if (notification === "SH_REQUEST_PIN" && sender) {
 			// another module wants the PIN entered (e.g. a locked app)
@@ -59,11 +60,14 @@ Module.register("MMM-SmartHome", {
 
 	socketNotificationReceived (notification, payload) {
 		switch (notification) {
-			case "SH_STATE":
+			case "SH_STATE": {
+				const prev = this.state;
 				this.state = payload;
 				this.sendNotification("SH_STATE", payload);
+				if (prev) this.applyLive(prev, payload);
 				if (this.panel) this.renderSection();
 				break;
+			}
 			case "SH_PIN_RESULT": {
 				const pending = this.pendingPin[payload.token];
 				if (!pending) return;
@@ -352,13 +356,13 @@ Module.register("MMM-SmartHome", {
 	sectionLayout (body) {
 		const modules = this.state.modules.map((m) => ({ ...m }));
 		const posOptions = this.state.positions.map((p) => ({ value: p, label: p.replace("_", " ") }));
-		body.appendChild(this.note("Turning a module on that was off at startup restarts the mirror (about 3 seconds)."));
+		body.appendChild(this.note("Changes apply immediately."));
 
 		modules.forEach((m) => {
 			const enabled = this.toggle(m.enabled !== false, (v) => {
 				m.enabled = v;
-				const live = this.applyEnabled(m.id, v);
-				this.save({ modules }, !live);
+				this.applyEnabled(m.id, v);
+				this.save({ modules });
 			});
 			const pos = this.cycler(posOptions, m.position, (v) => {
 				m.position = v;
@@ -376,7 +380,7 @@ Module.register("MMM-SmartHome", {
 		const key = this.input("Paste TMDB API key (v3)", "password");
 		const saveKey = this.button("Save key", () => {
 			if (!key.value.trim()) return;
-			this.save({ hero: { tmdbApiKey: key.value.trim() } }, true);
+			this.save({ hero: { tmdbApiKey: key.value.trim() } });
 			key.value = "";
 		});
 		const form = document.createElement("div");
@@ -385,10 +389,9 @@ Module.register("MMM-SmartHome", {
 		body.appendChild(form);
 
 		const typeOptions = [{ value: "movie,tv", label: "Movies & series" }, { value: "movie", label: "Movies only" }, { value: "tv", label: "Series only" }];
-		body.appendChild(this.row("Show", this.cycler(typeOptions, (hero.types || []).join(","), (v) => this.save({ hero: { types: v.split(",") } }, true))));
+		body.appendChild(this.row("Show", this.cycler(typeOptions, (hero.types || []).join(","), (v) => this.save({ hero: { types: v.split(",") } }))));
 		const speeds = [{ value: 6000, label: "Every 6 s" }, { value: 10000, label: "Every 10 s" }, { value: 15000, label: "Every 15 s" }, { value: 30000, label: "Every 30 s" }];
-		body.appendChild(this.row("Slide", this.cycler(speeds, hero.interval, (v) => this.save({ hero: { interval: v } }, true))));
-		body.appendChild(this.note("Changes here restart the mirror."));
+		body.appendChild(this.row("Slide", this.cycler(speeds, hero.interval, (v) => this.save({ hero: { interval: v } }))));
 	},
 
 	sectionWeather (body) {
@@ -405,9 +408,8 @@ Module.register("MMM-SmartHome", {
 		body.appendChild(form);
 
 		const general = { ...this.state.general };
-		body.appendChild(this.row("Units", this.cycler([{ value: "imperial", label: "°F / mph" }, { value: "metric", label: "°C / km/h" }], general.units, (v) => { general.units = v; this.save({ general }, true); })));
-		body.appendChild(this.row("Clock", this.cycler([{ value: 12, label: "12-hour" }, { value: 24, label: "24-hour" }], general.timeFormat, (v) => { general.timeFormat = v; this.save({ general }, true); })));
-		body.appendChild(this.note("Changing units or clock format restarts the mirror."));
+		body.appendChild(this.row("Units", this.cycler([{ value: "imperial", label: "°F / mph" }, { value: "metric", label: "°C / km/h" }], general.units, (v) => { general.units = v; this.save({ general }); })));
+		body.appendChild(this.row("Clock", this.cycler([{ value: 12, label: "12-hour" }, { value: 24, label: "24-hour" }], general.timeFormat, (v) => { general.timeFormat = v; this.save({ general }); })));
 	},
 
 	sectionSystem (body) {
@@ -435,6 +437,64 @@ Module.register("MMM-SmartHome", {
 		body.appendChild(this.note("Settings file: config/smarthome.json"));
 	},
 
+	/* ---------- live application of settings ---------- */
+
+	// Modules flagged off in smarthome.json load but start hidden, so they can be
+	// switched on later without a restart.
+	hideDisabledModules () {
+		for (const m of MM.getModules()) {
+			const classes = (m.data.classes || "").split(" ");
+			if (!classes.includes("sh-off")) continue;
+			m.hide(0, () => {}, { lockString: "sh" });
+			const el = document.getElementById(m.identifier);
+			if (el) el.classList.remove("sh-off");
+		}
+	},
+
+	applyLive (prev, next) {
+		const g0 = prev.general || {};
+		const g1 = next.general || {};
+		if (g0.units !== g1.units || g0.timeFormat !== g1.timeFormat) this.applyGeneral(g1);
+
+		const w0 = prev.weather || {};
+		const w1 = next.weather || {};
+		if (w0.lat !== w1.lat || w0.lon !== w1.lon) this.applyWeather(w1);
+
+		if (JSON.stringify(prev.hero) !== JSON.stringify(next.hero)) this.sendNotification("SH_HERO_CONFIG", next.hero);
+	},
+
+	applyGeneral (general) {
+		globalThis.config.units = general.units;
+		globalThis.config.timeFormat = general.timeFormat;
+		for (const m of MM.getModules()) {
+			if (m.name === "clock") {
+				m.config.timeFormat = general.timeFormat;
+				m.updateDom(0);
+			} else if (m.name === "weather") {
+				m.config.units = general.units;
+				m.config.tempUnits = general.units;
+				m.config.windUnits = general.units;
+				m.config.timeFormat = general.timeFormat;
+				this.reinitWeather(m);
+			}
+		}
+	},
+
+	applyWeather (weather) {
+		for (const m of MM.getModules()) {
+			if (m.name !== "weather") continue;
+			m.config.lat = weather.lat;
+			m.config.lon = weather.lon;
+			this.reinitWeather(m);
+		}
+	},
+
+	// Weather providers run in the node_helper: stop the instance and start it with the new config.
+	reinitWeather (m) {
+		m.sendSocketNotification("STOP_WEATHER", { instanceId: m.instanceId });
+		setTimeout(() => m.sendSocketNotification("INIT_WEATHER", { instanceId: m.instanceId, weatherProvider: m.config.weatherProvider, ...m.config }), 400);
+	},
+
 	/* ---------- live layout changes ---------- */
 
 	moduleVisible (id) {
@@ -446,13 +506,11 @@ Module.register("MMM-SmartHome", {
 		return MM.getModules().find((m) => (m.data.classes || "").split(" ").includes(`sh-${id}`));
 	},
 
-	// returns true if applied live, false if a restart is needed
 	applyEnabled (id, on) {
 		const m = this.findModule(id);
-		if (!m) return false;
+		if (!m) return;
 		if (on) m.show(400, () => {}, { lockString: "sh" });
 		else m.hide(400, () => {}, { lockString: "sh" });
-		return true;
 	},
 
 	applyPosition (id, position) {
