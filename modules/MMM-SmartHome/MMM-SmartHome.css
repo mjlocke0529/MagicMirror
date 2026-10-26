@@ -52,7 +52,9 @@ body > .region { display: none !important; }
 .sh-slot > .module > .module-content { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 
 /* let our own modules fill their slot */
-.sh-slot .sh-hero { flex: 1 1 auto; align-self: stretch; height: auto; min-height: 0; }
+/* hero: pin to the slot so its height never depends on the flex chain */
+.sh-slot > .module.sh-hero > .module-content { position: absolute; inset: 0; display: block; }
+.sh-slot .sh-hero { position: absolute; inset: 0; height: auto; min-height: 0; }
 .sh-slot > .module.sh-apps > .module-content { justify-content: center; }
 .sh-slot > .module.sh-news > .module-content { justify-content: center; }
 .sh-slot > .module.sh-compliments > .module-content { justify-content: center; }
