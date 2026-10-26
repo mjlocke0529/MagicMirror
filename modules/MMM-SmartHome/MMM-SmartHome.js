@@ -416,11 +416,22 @@ Module.register("MMM-SmartHome", {
 		this.panel.querySelectorAll(".sh-nav").forEach((b) => b.classList.toggle("active", b.dataset.section === this.section));
 		document.body.classList.toggle("sh-layout-edit", this.section === "layout");
 		const body = this.panel.querySelector(".sh-panel-body");
+		// keep scroll position and focus across a rebuild of the same section
+		const sameSection = body.dataset.section === this.section;
+		const scroll = sameSection ? body.scrollTop : 0;
+		const prevFocus = sameSection ? [...body.querySelectorAll(".sh-focusable")].indexOf(document.activeElement) : -1;
+		body.dataset.section = this.section;
 		body.innerHTML = "";
 		const builders = { layout: this.sectionLayout, apps: this.sectionApps, theme: this.sectionTheme, hero: this.sectionHero, weather: this.sectionWeather, system: this.sectionSystem };
 		builders[this.section].call(this, body);
+		if (sameSection) {
+			body.scrollTop = scroll;
+			const items = body.querySelectorAll(".sh-focusable");
+			if (prevFocus >= 0 && items.length) items[Math.min(prevFocus, items.length - 1)].focus({ preventScroll: true });
+			return;
+		}
 		const first = body.querySelector(".sh-focusable");
-		if (first && !(document.activeElement && this.panel.querySelector(".sh-panel-nav").contains(document.activeElement))) first.focus();
+		if (first && !(document.activeElement && this.panel.querySelector(".sh-panel-nav").contains(document.activeElement))) first.focus({ preventScroll: true });
 	},
 
 	/* ---------- control helpers ---------- */
