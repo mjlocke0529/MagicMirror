@@ -84,3 +84,6 @@ tests/**/.tmp/
 
 # SmartHome: track our own modules
 !/modules/MMM-SmartHomeApps/
+!/config/config.js
+!/config/smarthome.json.sample
+!/modules/MMM-SmartHome/

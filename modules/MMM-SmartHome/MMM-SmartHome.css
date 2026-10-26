@@ -1,0 +1,203 @@
+/* ---------- shell ---------- */
+
+.sh-root { display: none; }
+
+.sh-cog {
+	position: fixed;
+	top: 18px;
+	right: 22px;
+	z-index: 10010;
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	border: 1px solid rgba(255, 255, 255, 0.25);
+	background: rgba(0, 0, 0, 0.6);
+	color: #fff;
+	font-size: 26px;
+	line-height: 1;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.25s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sh-cog.visible,
+.sh-cog:focus-visible { opacity: 1; }
+
+.sh-cog:hover,
+.sh-cog:focus-visible {
+	outline: none;
+	transform: scale(1.1);
+	box-shadow: 0 0 20px rgba(255, 255, 255, 0.35);
+	border-color: #fff;
+}
+
+.sh-toast {
+	position: fixed;
+	top: 24px;
+	left: 50%;
+	transform: translate(-50%, -20px);
+	z-index: 10020;
+	padding: 10px 22px;
+	border-radius: 999px;
+	background: rgba(30, 30, 30, 0.95);
+	border: 1px solid rgba(255, 255, 255, 0.25);
+	color: #fff;
+	font-size: 18px;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.sh-toast.visible { opacity: 1; transform: translate(-50%, 0); }
+.sh-toast.error { border-color: #ff6b6b; }
+
+/* ---------- PIN pad ---------- */
+
+.sh-pin {
+	position: fixed;
+	inset: 0;
+	z-index: 10015;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.75);
+}
+
+.sh-pin-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 14px;
+	padding: 28px 32px;
+	border-radius: 18px;
+	background: #1a1a1a;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	color: #fff;
+}
+
+.sh-pin-title { font-size: 22px; }
+.sh-pin-dots { font-size: 26px; letter-spacing: 10px; min-height: 32px; }
+.sh-pin-keys { display: grid; grid-template-columns: repeat(3, 72px); gap: 10px; }
+
+.sh-pin-keys button,
+.sh-pin-cancel {
+	appearance: none;
+	font-family: inherit;
+	font-size: 22px;
+	height: 60px;
+	border-radius: 12px;
+	border: 1px solid rgba(255, 255, 255, 0.25);
+	background: #2a2a2a;
+	color: #fff;
+	cursor: pointer;
+}
+
+.sh-pin-cancel { font-size: 16px; height: 40px; padding: 0 24px; }
+.sh-pin-error { min-height: 20px; color: #ff6b6b; font-size: 15px; }
+
+/* ---------- settings panel ---------- */
+
+.sh-panel {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	width: 560px;
+	max-width: 100vw;
+	z-index: 10012;
+	display: flex;
+	flex-direction: column;
+	background: rgba(18, 18, 18, 0.97);
+	border-left: 1px solid rgba(255, 255, 255, 0.15);
+	box-shadow: -20px 0 50px rgba(0, 0, 0, 0.6);
+	color: #fff;
+	font-size: 17px;
+	transform: translateX(100%);
+	transition: transform 0.25s ease;
+}
+
+.sh-panel.open { transform: translateX(0); }
+
+.sh-panel-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 20px 24px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sh-panel-title { font-size: 24px; font-weight: 300; }
+
+.sh-panel-nav {
+	display: flex;
+	gap: 6px;
+	padding: 12px 24px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sh-nav {
+	appearance: none;
+	font-family: inherit;
+	font-size: 16px;
+	padding: 8px 16px;
+	border-radius: 999px;
+	border: 1px solid transparent;
+	background: transparent;
+	color: rgba(255, 255, 255, 0.6);
+	cursor: pointer;
+}
+
+.sh-nav.active { background: rgba(255, 255, 255, 0.12); color: #fff; }
+
+.sh-panel-body {
+	flex: 1;
+	overflow-y: auto;
+	padding: 16px 24px 32px;
+}
+
+.sh-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 0;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sh-row-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh-row-controls { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
+.sh-note { color: rgba(255, 255, 255, 0.55); font-size: 14px; margin: 14px 0 8px; }
+
+.sh-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+
+.sh-btn,
+.sh-toggle,
+.sh-cycler,
+.sh-panel-close,
+.sh-input {
+	appearance: none;
+	font-family: inherit;
+	font-size: 15px;
+	padding: 7px 14px;
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.25);
+	background: #262626;
+	color: #fff;
+	cursor: pointer;
+}
+
+.sh-input { cursor: text; background: #111; min-width: 150px; }
+.sh-input[type="color"] { width: 48px; min-width: 0; padding: 2px; height: 36px; }
+.sh-small { padding: 7px 10px; }
+.sh-danger { border-color: rgba(220, 60, 60, 0.6); color: #ff8080; }
+.sh-toggle.on { background: #2e7d32; border-color: #4caf50; }
+.sh-cycler { min-width: 150px; text-align: center; }
+.sh-panel-close { background: #fff; color: #000; border-color: #fff; }
+
+.sh-focusable:focus-visible,
+.sh-panel .sh-focusable:focus {
+	outline: none;
+	border-color: #fff;
+	box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}

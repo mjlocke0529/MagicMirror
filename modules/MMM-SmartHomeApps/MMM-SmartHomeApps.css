@@ -1,52 +1,85 @@
-.smarthome-apps {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 16px;
-	justify-content: center;
+/* ---------- app rail ---------- */
+
+.sh-rail-wrap {
+	width: 100%;
 }
 
-.smarthome-app-tile {
+.sh-rail {
+	display: flex;
+	gap: 22px;
+	padding: 28px 12vw;
+	overflow-x: auto;
+	scrollbar-width: none;
+	-webkit-mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%);
+	mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%);
+}
+
+.sh-rail::-webkit-scrollbar { display: none; }
+
+.sh-tile {
 	--tile-color: #333;
-	appearance: none;
-	border: 2px solid transparent;
-	border-radius: 14px;
-	background: var(--tile-color);
+	position: relative;
+	flex: 0 0 auto;
+	aspect-ratio: 16 / 9;
+	border-radius: 18px;
+	border: 3px solid transparent;
+	background:
+		radial-gradient(120% 140% at 85% 15%, rgba(255, 255, 255, 0.22), transparent 55%),
+		linear-gradient(135deg, var(--tile-color) 0%, color-mix(in srgb, var(--tile-color) 55%, #000) 100%);
 	color: #fff;
-	width: 220px;
-	height: 120px;
 	cursor: pointer;
-	font-family: inherit;
+	overflow: hidden;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+	transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+	opacity: 0.8;
+}
+
+.sh-tile.selected {
+	opacity: 1;
+	transform: scale(1.07);
+	border-color: #fff;
+	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4), 0 14px 40px rgba(0, 0, 0, 0.6), 0 0 36px rgba(255, 255, 255, 0.25);
+	z-index: 1;
+}
+
+.sh-tile-foot {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+	gap: 14px;
+	padding: 14px 16px;
+	background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
 }
 
-.smarthome-app-tile:hover,
-.smarthome-app-tile:focus-visible {
-	outline: none;
-	border-color: #fff;
-	transform: scale(1.04);
-	box-shadow: 0 0 24px rgba(255, 255, 255, 0.25);
+.sh-tile-icon {
+	width: 54px;
+	height: 54px;
+	object-fit: contain;
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.92);
+	padding: 5px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-.smarthome-app-tile.launching {
-	transform: scale(0.97);
-	opacity: 0.7;
-}
-
-.smarthome-app-label {
-	font-size: 28px;
+.sh-tile-name {
+	font-size: 24px;
 	font-weight: 600;
-	letter-spacing: 0.5px;
-	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+	letter-spacing: 0.3px;
+	text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
-.smarthome-apps-status {
-	width: 100%;
-	text-align: center;
-	margin-top: 8px;
+.sh-tile-badge {
+	position: absolute;
+	top: 12px;
+	right: 14px;
+	font-size: 20px;
+	filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
 }
+
+.sh-rail-status { text-align: center; }
 
 /* ---------- embedded overlay ---------- */
 
@@ -95,238 +128,5 @@
 	transition: opacity 0.2s ease;
 }
 
-.smarthome-overlay-back.visible {
-	opacity: 1;
-}
-
-.smarthome-overlay.video-fullscreen .smarthome-overlay-back {
-	display: none;
-}
-
-/* ---------- admin mode & parental controls ---------- */
-
-.smarthome-app-tile {
-	position: relative;
-}
-
-.smarthome-app-badge {
-	position: absolute;
-	top: 8px;
-	right: 10px;
-	font-size: 18px;
-}
-
-.smarthome-apps.admin .smarthome-app-tile.hidden-app {
-	opacity: 0.35;
-	border-style: dashed;
-	border-color: rgba(255, 255, 255, 0.4);
-}
-
-.smarthome-app-tile.add-tile {
-	background: transparent;
-	border: 2px dashed rgba(255, 255, 255, 0.4);
-}
-
-.smarthome-tile-controls {
-	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	display: flex;
-	justify-content: center;
-	gap: 6px;
-	padding: 6px;
-	background: rgba(0, 0, 0, 0.45);
-	border-radius: 0 0 12px 12px;
-}
-
-.smarthome-tile-control {
-	font-size: 13px;
-	padding: 3px 10px;
-	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.2);
-	cursor: pointer;
-}
-
-.smarthome-tile-control:hover {
-	background: rgba(255, 255, 255, 0.4);
-}
-
-.smarthome-tile-control.danger {
-	background: rgba(200, 40, 40, 0.6);
-}
-
-.smarthome-add-form {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	width: 220px;
-	padding: 12px;
-	border-radius: 14px;
-	background: rgba(255, 255, 255, 0.08);
-}
-
-.smarthome-add-form input,
-.smarthome-add-form button {
-	font-family: inherit;
-	font-size: 15px;
-	padding: 6px 8px;
-	border-radius: 6px;
-	border: 1px solid rgba(255, 255, 255, 0.3);
-	background: #111;
-	color: #fff;
-}
-
-.smarthome-add-form input[type="color"] {
-	height: 36px;
-	padding: 2px;
-}
-
-.smarthome-apps-footer {
-	width: 100%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 14px;
-	margin-top: 10px;
-	flex-wrap: wrap;
-}
-
-.smarthome-admin-link {
-	appearance: none;
-	background: none;
-	border: 0;
-	color: inherit;
-	font-family: inherit;
-	cursor: pointer;
-	opacity: 0.4;
-}
-
-.smarthome-admin-link:hover {
-	opacity: 1;
-	text-decoration: underline;
-}
-
-.smarthome-admin-done {
-	appearance: none;
-	font-family: inherit;
-	font-size: 16px;
-	padding: 6px 18px;
-	border-radius: 999px;
-	border: 1px solid #fff;
-	background: #fff;
-	color: #000;
-	cursor: pointer;
-}
-
-/* ---------- PIN pad ---------- */
-
-.smarthome-pin {
-	position: fixed;
-	inset: 0;
-	z-index: 10001;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: rgba(0, 0, 0, 0.75);
-}
-
-.smarthome-pin-card {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 14px;
-	padding: 28px 32px;
-	border-radius: 18px;
-	background: #1a1a1a;
-	border: 1px solid rgba(255, 255, 255, 0.2);
-	color: #fff;
-}
-
-.smarthome-pin-title {
-	font-size: 22px;
-}
-
-.smarthome-pin-dots {
-	font-size: 26px;
-	letter-spacing: 10px;
-	min-height: 32px;
-}
-
-.smarthome-pin-keys {
-	display: grid;
-	grid-template-columns: repeat(3, 72px);
-	gap: 10px;
-}
-
-.smarthome-pin-keys button,
-.smarthome-pin-cancel {
-	appearance: none;
-	font-family: inherit;
-	font-size: 22px;
-	height: 60px;
-	border-radius: 12px;
-	border: 1px solid rgba(255, 255, 255, 0.25);
-	background: #2a2a2a;
-	color: #fff;
-	cursor: pointer;
-}
-
-.smarthome-pin-keys button:hover,
-.smarthome-pin-cancel:hover {
-	background: #3a3a3a;
-}
-
-.smarthome-pin-cancel {
-	font-size: 16px;
-	height: 40px;
-	padding: 0 24px;
-}
-
-.smarthome-pin-error {
-	min-height: 20px;
-	color: #ff6b6b;
-	font-size: 15px;
-}
-
-/* ---------- icons ---------- */
-
-.smarthome-app-tile.has-icon {
-	flex-direction: column;
-	gap: 8px;
-	height: 150px;
-}
-
-.smarthome-app-icon {
-	border-radius: 16px;
-	background: rgba(255, 255, 255, 0.92);
-	padding: 6px;
-	object-fit: contain;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-}
-
-.smarthome-app-tile.has-icon .smarthome-app-label {
-	font-size: 20px;
-}
-
-/* ---------- weather location form ---------- */
-
-.smarthome-weather-form {
-	display: flex;
-	gap: 8px;
-}
-
-.smarthome-weather-form input,
-.smarthome-weather-form button {
-	font-family: inherit;
-	font-size: 15px;
-	padding: 6px 10px;
-	border-radius: 6px;
-	border: 1px solid rgba(255, 255, 255, 0.3);
-	background: #111;
-	color: #fff;
-}
-
-.smarthome-weather-form input {
-	width: 240px;
-}
+.smarthome-overlay-back.visible { opacity: 1; }
+.smarthome-overlay.video-fullscreen .smarthome-overlay-back { display: none; }

@@ -1,119 +1,18 @@
-const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 const { execFile } = require("node:child_process");
 const NodeHelper = require("node_helper");
 const Log = require("logger");
 
-const STATE_FILE = path.join(__dirname, "state.json");
-
+/* External-browser fallback: launch an app URL in a real browser (mode: "external"). */
 module.exports = NodeHelper.create({
-	start () {
-		Log.log(`[${this.name}] helper started`);
-		this.adminPin = null;
-	},
-
 	socketNotificationReceived (notification, payload) {
-		switch (notification) {
-			case "SMARTHOME_INIT":
-				this.adminPin = String(payload.adminPin ?? "0000");
-				if (this.adminPin === "0000") Log.warn(`[${this.name}] adminPin is the default "0000" - set adminPin in config.js`);
-				this.sendState();
-				break;
-			case "SMARTHOME_VERIFY_PIN":
-				this.sendSocketNotification("SMARTHOME_PIN_RESULT", { ok: this.checkPin(payload.pin), purpose: payload.purpose, app: payload.app });
-				break;
-			case "SMARTHOME_SAVE_STATE":
-				if (!this.checkPin(payload.pin)) {
-					Log.warn(`[${this.name}] state save rejected: bad PIN`);
-					return;
-				}
-				this.writeState({ overrides: payload.overrides || {}, customApps: payload.customApps || [] });
-				this.sendState();
-				break;
-			case "SMARTHOME_OPEN_APP":
-				this.openApp(payload);
-				break;
-			case "SMARTHOME_SET_WEATHER_LOCATION":
-				if (!this.checkPin(payload.pin)) return;
-				this.setWeatherLocation(payload.query);
-				break;
-		}
+		if (notification === "SMARTHOME_OPEN_APP") this.openApp(payload);
 	},
-
-	/* ---------- weather location (geocode -> rewrite config.js -> relaunch) ---------- */
-
-	async setWeatherLocation (query) {
-		const reply = (ok, message, extra = {}) => this.sendSocketNotification("SMARTHOME_WEATHER_RESULT", { ok, message, ...extra });
-		try {
-			const url = `https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=${encodeURIComponent(query)}`;
-			const res = await fetch(url);
-			const data = await res.json();
-			const hit = data.results && data.results[0];
-			if (!hit) return reply(false, `No match for "${query}"`);
-
-			const label = [hit.name, hit.admin1, hit.country_code].filter(Boolean).join(", ");
-			const configPath = path.resolve(__dirname, "..", "..", "config", "config.js");
-			let config = fs.readFileSync(configPath, "utf8");
-			const before = config;
-			config = config.replace(/(\blat:\s*)-?\d+(\.\d+)?/g, `$1${hit.latitude}`).replace(/(\blon:\s*)-?\d+(\.\d+)?/g, `$1${hit.longitude}`);
-			if (config === before) return reply(false, "No lat/lon entries found in config.js");
-			fs.writeFileSync(configPath, config);
-			Log.log(`[${this.name}] weather location set to ${label} (${hit.latitude}, ${hit.longitude}); restarting`);
-			reply(true, `Weather set to ${label}. Restarting…`, { label });
-			setTimeout(() => this.relaunch(), 1500);
-		} catch (error) {
-			Log.error(`[${this.name}] weather location failed: ${error.message}`);
-			reply(false, error.message);
-		}
-	},
-
-	relaunch () {
-		try {
-			const { app } = require("electron");
-			if (app && app.relaunch) {
-				app.relaunch();
-				app.exit(0);
-				return;
-			}
-		} catch {
-			// not running under Electron (serveronly) - fall through
-		}
-		Log.warn(`[${this.name}] could not relaunch automatically; restart MagicMirror to apply the new weather location`);
-	},
-
-	checkPin (pin) {
-		return typeof pin === "string" && pin.length > 0 && pin === this.adminPin;
-	},
-
-	/* ---------- persisted state: { overrides: { [appName]: { hidden, locked } }, customApps: [...] } ---------- */
-
-	readState () {
-		try {
-			return JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
-		} catch {
-			return { overrides: {}, customApps: [] };
-		}
-	},
-
-	writeState (state) {
-		try {
-			fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
-		} catch (error) {
-			Log.error(`[${this.name}] could not write ${STATE_FILE}: ${error.message}`);
-		}
-	},
-
-	sendState () {
-		this.sendSocketNotification("SMARTHOME_STATE", this.readState());
-	},
-
-	/* ---------- external browser mode ---------- */
 
 	openApp ({ name, url, browser, kiosk }) {
 		let cmd;
 		let args;
-
 		if (process.platform === "darwin") {
 			if (!browser || browser === "default") {
 				cmd = "open";
@@ -131,7 +30,6 @@ module.exports = NodeHelper.create({
 			cmd = "cmd";
 			args = ["/c", "start", "", url];
 		}
-
 		Log.log(`[${this.name}] opening ${name}: ${cmd} ${args.join(" ")}`);
 		execFile(cmd, args, (error) => {
 			if (error) Log.error(`[${this.name}] failed to open ${name}: ${error.message}`);

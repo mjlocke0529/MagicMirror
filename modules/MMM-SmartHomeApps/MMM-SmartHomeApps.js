@@ -1,27 +1,19 @@
-/* MMM-SmartHomeApps
- * App launcher for the SmartHome dashboard, with PIN-protected admin mode
- * (parental controls: hide apps, lock apps behind the PIN, add/remove apps).
+/* MMM-SmartHomeApps - the app rail
+ * Widescreen tiles in a horizontal rail with faded edges. Navigate with
+ * ←/→, open with Enter, return with Esc/Back. Apps come from
+ * config/smarthome.json (via MMM-SmartHome); locked apps ask the shell for the PIN.
  *
- * mode: "embedded" (default) - opens the app in a full-window <webview> inside
- *        MagicMirror. Needs the castLabs Electron build (Widevine) for DRM
- *        services like Netflix / Disney+, and webviewTag enabled in electron.js.
- * mode: "external" - launches the URL in a real browser via node_helper.
+ * Streaming sites play inside a full-window <webview> (castLabs Electron for DRM).
  */
 Module.register("MMM-SmartHomeApps", {
 	defaults: {
-		mode: "embedded",
-		adminPin: "0000", // change this in config.js!
-		adminTimeout: 2 * 60 * 1000, // leave admin mode after 2 minutes
+		mode: "embedded", // or "external" to launch a real browser
 		partition: "persist:smarthome-apps",
-		browser: "Google Chrome", // external mode only
-		kiosk: true, // external mode only
+		browser: "Google Chrome",
+		kiosk: true,
 		backButtonTimeout: 3000,
-		showIcons: true, // show each site's own icon (app.icon, or fetched from the site's domain)
-		iconSize: 72,
-		apps: [
-			{ name: "Netflix", url: "https://www.netflix.com/browse", color: "#e50914" },
-			{ name: "Disney+", url: "https://www.disneyplus.com/home", color: "#0f3fa3" }
-		]
+		tileWidth: 320,
+		apps: []
 	},
 
 	getStyles () {
@@ -29,310 +21,169 @@ Module.register("MMM-SmartHomeApps", {
 	},
 
 	start () {
-		this.status = null;
+		this.apps = this.config.apps || [];
+		this.selected = 0;
 		this.overlay = null;
-		this.pinDialog = null;
-		this.state = { overrides: {}, customApps: [] };
-		this.admin = false;
-		this.adminPinCache = null;
-		this.adminTimer = null;
-		this.showAddForm = false;
-		document.addEventListener("keydown", (event) => this.onHostKey(event));
-		this.sendSocketNotification("SMARTHOME_INIT", { adminPin: String(this.config.adminPin) });
-	},
-
-	/* ---------- app list ---------- */
-
-	allApps () {
-		const custom = (this.state.customApps || []).map((app) => ({ ...app, custom: true }));
-		return [...this.config.apps, ...custom].map((app) => {
-			const o = this.state.overrides?.[app.name] || {};
-			return { ...app, hidden: !!o.hidden, locked: !!o.locked };
-		});
+		this.pendingOpen = null;
+		this.status = null;
+		document.addEventListener("keydown", (e) => this.onKey(e));
 	},
 
 	visibleApps () {
-		return this.admin ? this.allApps() : this.allApps().filter((app) => !app.hidden);
+		return this.apps.filter((a) => !a.hidden);
 	},
 
-	setOverride (name, key, value) {
-		const overrides = { ...(this.state.overrides || {}) };
-		overrides[name] = { ...(overrides[name] || {}), [key]: value };
-		this.saveState({ overrides });
+	/* ---------- notifications ---------- */
+
+	notificationReceived (notification, payload) {
+		if (notification === "SH_STATE" && payload && Array.isArray(payload.apps)) {
+			this.apps = payload.apps;
+			this.selected = Math.min(this.selected, Math.max(0, this.visibleApps().length - 1));
+			this.updateDom(0);
+		} else if (notification === "SH_PIN_GRANTED" && this.pendingOpen && payload.token === this.pendingOpen.token) {
+			const app = this.pendingOpen.app;
+			this.pendingOpen = null;
+			this.openApp(app);
+		} else if (notification === "SH_FOCUS_RAIL") {
+			this.updateDom(0);
+		}
 	},
 
-	saveState (patch) {
-		this.state = { ...this.state, ...patch };
-		this.sendSocketNotification("SMARTHOME_SAVE_STATE", { pin: this.adminPinCache, ...this.state });
-		this.updateDom(0);
+	socketNotificationReceived (notification, payload) {
+		if (notification === "SMARTHOME_OPEN_APP_RESULT") {
+			this.status = payload.ok ? null : `Couldn't open ${payload.name}: ${payload.error}`;
+			this.updateDom(0);
+		}
 	},
 
-	/* ---------- rendering ---------- */
+	/* ---------- rail ---------- */
 
 	getDom () {
 		const wrapper = document.createElement("div");
-		wrapper.className = `smarthome-apps${this.admin ? " admin" : ""}`;
+		wrapper.className = "sh-rail-wrap";
+		const rail = document.createElement("div");
+		rail.className = "sh-rail";
+		wrapper.appendChild(rail);
 
-		this.visibleApps().forEach((app) => wrapper.appendChild(this.renderTile(app)));
-
-		if (this.admin) {
-			wrapper.appendChild(this.showAddForm ? this.renderAddForm() : this.renderAddTile());
+		const apps = this.visibleApps();
+		if (!apps.length) {
+			const empty = document.createElement("div");
+			empty.className = "dimmed small";
+			empty.textContent = "No apps - add some in Settings";
+			wrapper.appendChild(empty);
+			return wrapper;
 		}
 
-		const footer = document.createElement("div");
-		footer.className = "smarthome-apps-footer";
-		if (this.admin) {
-			const done = document.createElement("button");
-			done.type = "button";
-			done.className = "smarthome-admin-done";
-			done.textContent = "Done";
-			done.addEventListener("click", () => this.leaveAdmin());
-			footer.appendChild(done);
-			footer.appendChild(this.renderWeatherForm());
-			const hint = document.createElement("span");
-			hint.className = "dimmed xsmall";
-			hint.textContent = "Admin mode: hidden apps are greyed out, locked apps need the PIN to open";
-			footer.appendChild(hint);
-		} else {
-			const adminLink = document.createElement("button");
-			adminLink.type = "button";
-			adminLink.className = "smarthome-admin-link dimmed xsmall";
-			adminLink.textContent = "Admin";
-			adminLink.addEventListener("click", () => this.askPin("admin"));
-			footer.appendChild(adminLink);
-		}
+		apps.forEach((app, i) => {
+			const tile = document.createElement("div");
+			tile.className = `sh-tile${i === this.selected ? " selected" : ""}${app.locked ? " locked" : ""}`;
+			tile.style.setProperty("--tile-color", app.color || "#333");
+			tile.style.width = `${this.config.tileWidth}px`;
+			tile.tabIndex = -1;
+
+			const foot = document.createElement("div");
+			foot.className = "sh-tile-foot";
+			const icon = document.createElement("img");
+			icon.className = "sh-tile-icon";
+			icon.alt = "";
+			icon.src = app.icon || this.faviconFor(app.url);
+			icon.addEventListener("error", () => icon.remove());
+			const name = document.createElement("span");
+			name.className = "sh-tile-name";
+			name.textContent = app.name;
+			foot.append(icon, name);
+			tile.appendChild(foot);
+
+			if (app.locked) {
+				const badge = document.createElement("span");
+				badge.className = "sh-tile-badge";
+				badge.textContent = "🔒";
+				tile.appendChild(badge);
+			}
+
+			tile.addEventListener("mouseenter", () => this.select(i, false));
+			tile.addEventListener("click", () => this.activate(app));
+			rail.appendChild(tile);
+		});
+
 		if (this.status) {
 			const note = document.createElement("div");
-			note.className = "smarthome-apps-status dimmed xsmall";
+			note.className = "dimmed xsmall sh-rail-status";
 			note.textContent = this.status;
-			footer.appendChild(note);
+			wrapper.appendChild(note);
 		}
-		wrapper.appendChild(footer);
+
+		requestAnimationFrame(() => this.scrollToSelected(rail, false));
 		return wrapper;
 	},
 
-	renderTile (app) {
-		const tile = document.createElement("button");
-		tile.className = `smarthome-app-tile${app.hidden ? " hidden-app" : ""}${app.locked ? " locked-app" : ""}`;
-		tile.type = "button";
-		tile.style.setProperty("--tile-color", app.color || "#333");
-
-		const label = document.createElement("span");
-		label.className = "smarthome-app-label";
-		label.textContent = app.name;
-
-		if (this.config.showIcons) {
-			const icon = document.createElement("img");
-			icon.className = "smarthome-app-icon";
-			icon.alt = "";
-			icon.width = this.config.iconSize;
-			icon.height = this.config.iconSize;
-			icon.src = this.iconFor(app);
-			icon.addEventListener("error", () => { icon.remove(); tile.classList.remove("has-icon"); });
-			tile.classList.add("has-icon");
-			tile.appendChild(icon);
-		}
-		tile.appendChild(label);
-
-		if (app.locked) {
-			const badge = document.createElement("span");
-			badge.className = "smarthome-app-badge";
-			badge.textContent = "🔒";
-			tile.appendChild(badge);
-		}
-
-		if (this.admin) {
-			const controls = document.createElement("div");
-			controls.className = "smarthome-tile-controls";
-			controls.appendChild(this.controlButton(app.hidden ? "Show" : "Hide", () => this.setOverride(app.name, "hidden", !app.hidden)));
-			controls.appendChild(this.controlButton(app.locked ? "Unlock" : "Lock", () => this.setOverride(app.name, "locked", !app.locked)));
-			if (app.custom) {
-				controls.appendChild(this.controlButton("Remove", () => {
-					const customApps = this.state.customApps.filter((a) => a.name !== app.name);
-					const overrides = { ...this.state.overrides };
-					delete overrides[app.name];
-					this.saveState({ customApps, overrides });
-				}, "danger"));
-			}
-			tile.appendChild(controls);
-		} else {
-			tile.addEventListener("click", () => {
-				if (app.locked) {
-					this.askPin("open", app);
-				} else {
-					this.openApp(app, tile);
-				}
-			});
-		}
-		return tile;
-	},
-
-	// The site's own icon: an explicit app.icon (URL or path), else the favicon for its domain.
-	iconFor (app) {
-		if (app.icon) return app.icon;
+	faviconFor (url) {
 		try {
-			const host = new URL(app.url).hostname;
-			return `https://www.google.com/s2/favicons?domain=${host}&sz=128`;
+			return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=128`;
 		} catch {
 			return "";
 		}
 	},
 
-	controlButton (text, onClick, extraClass = "") {
-		const b = document.createElement("span");
-		b.className = `smarthome-tile-control ${extraClass}`;
-		b.textContent = text;
-		b.addEventListener("click", (event) => {
-			event.stopPropagation();
-			this.touchAdmin();
-			onClick();
-		});
-		return b;
+	select (index, scroll = true) {
+		const apps = this.visibleApps();
+		if (!apps.length) return;
+		this.selected = Math.max(0, Math.min(apps.length - 1, index));
+		const rail = document.querySelector(`#${this.identifier} .sh-rail`);
+		if (!rail) return;
+		[...rail.children].forEach((t, i) => t.classList.toggle("selected", i === this.selected));
+		if (scroll) this.scrollToSelected(rail, true);
 	},
 
-	renderAddTile () {
-		const tile = document.createElement("button");
-		tile.type = "button";
-		tile.className = "smarthome-app-tile add-tile";
-		tile.innerHTML = "<span class=\"smarthome-app-label\">+ Add app</span>";
-		tile.addEventListener("click", () => { this.touchAdmin(); this.showAddForm = true; this.updateDom(0); });
-		return tile;
+	scrollToSelected (rail, smooth) {
+		const tile = rail.children[this.selected];
+		if (tile) tile.scrollIntoView({ inline: "center", block: "nearest", behavior: smooth ? "smooth" : "auto" });
 	},
 
-	renderAddForm () {
-		const form = document.createElement("form");
-		form.className = "smarthome-add-form";
-		const name = Object.assign(document.createElement("input"), { placeholder: "Name (e.g. YouTube)", required: true });
-		const url = Object.assign(document.createElement("input"), { placeholder: "https://…", type: "url", required: true });
-		const color = Object.assign(document.createElement("input"), { type: "color", value: "#444444" });
-		const save = Object.assign(document.createElement("button"), { type: "submit", textContent: "Save" });
-		const cancel = Object.assign(document.createElement("button"), { type: "button", textContent: "Cancel" });
-		cancel.addEventListener("click", () => { this.showAddForm = false; this.updateDom(0); });
-		[name, url, color, save, cancel].forEach((el) => form.appendChild(el));
-		form.addEventListener("submit", (event) => {
-			event.preventDefault();
-			this.touchAdmin();
-			const appName = name.value.trim();
-			if (!appName || this.allApps().some((a) => a.name === appName)) {
-				this.status = "An app with that name already exists";
-				this.updateDom(0);
-				return;
+	activate (app) {
+		if (app.locked) {
+			const token = `${Date.now()}`;
+			this.pendingOpen = { app, token };
+			this.sendNotification("SH_REQUEST_PIN", { title: `PIN required for ${app.name}`, token });
+			return;
+		}
+		this.openApp(app);
+	},
+
+	/* ---------- remote / keyboard ---------- */
+
+	shellBusy () {
+		return document.body.classList.contains("sh-pin-open") || document.body.classList.contains("sh-panel-open");
+	},
+
+	onKey (event) {
+		if (this.shellBusy()) return;
+
+		if (this.overlay) {
+			if (["Escape", "BrowserBack", "Backspace", "BrowserHome", "Home"].includes(event.key)) {
+				event.preventDefault();
+				this.closeEmbedded();
 			}
-			this.showAddForm = false;
-			this.status = null;
-			this.saveState({ customApps: [...(this.state.customApps || []), { name: appName, url: url.value.trim(), color: color.value }] });
-		});
-		setTimeout(() => name.focus(), 50);
-		return form;
-	},
+			return;
+		}
 
-	renderWeatherForm () {
-		const form = document.createElement("form");
-		form.className = "smarthome-weather-form";
-		const input = Object.assign(document.createElement("input"), { placeholder: "Weather location (city, state)", required: true });
-		const save = Object.assign(document.createElement("button"), { type: "submit", textContent: "Set weather" });
-		form.append(input, save);
-		form.addEventListener("submit", (event) => {
-			event.preventDefault();
-			this.touchAdmin();
-			this.status = `Looking up "${input.value.trim()}"…`;
-			this.sendSocketNotification("SMARTHOME_SET_WEATHER_LOCATION", { pin: this.adminPinCache, query: input.value.trim() });
-			this.updateDom(0);
-		});
-		return form;
-	},
-
-	/* ---------- admin mode ---------- */
-
-	enterAdmin (pin) {
-		this.admin = true;
-		this.adminPinCache = pin;
-		this.touchAdmin();
-		this.updateDom(0);
-	},
-
-	touchAdmin () {
-		clearTimeout(this.adminTimer);
-		this.adminTimer = setTimeout(() => this.leaveAdmin(), this.config.adminTimeout);
-	},
-
-	leaveAdmin () {
-		clearTimeout(this.adminTimer);
-		this.admin = false;
-		this.adminPinCache = null;
-		this.showAddForm = false;
-		this.status = null;
-		this.updateDom(0);
-	},
-
-	/* ---------- PIN pad ---------- */
-
-	askPin (purpose, app) {
-		this.closePin();
-		const dialog = document.createElement("div");
-		dialog.className = "smarthome-pin";
-		dialog.innerHTML = `
-			<div class="smarthome-pin-card">
-				<div class="smarthome-pin-title">${purpose === "admin" ? "Admin PIN" : `PIN required for ${app.name}`}</div>
-				<div class="smarthome-pin-dots"></div>
-				<div class="smarthome-pin-keys"></div>
-				<div class="smarthome-pin-error"></div>
-			</div>`;
-		const dots = dialog.querySelector(".smarthome-pin-dots");
-		const keys = dialog.querySelector(".smarthome-pin-keys");
-		let entered = "";
-		const render = () => { dots.textContent = "●".repeat(entered.length) + "○".repeat(Math.max(0, 4 - entered.length)); };
-		const submit = () => {
-			if (!entered) return;
-			this.pendingPin = entered;
-			this.sendSocketNotification("SMARTHOME_VERIFY_PIN", { pin: entered, purpose, app });
-		};
-		["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "OK"].forEach((k) => {
-			const key = document.createElement("button");
-			key.type = "button";
-			key.textContent = k;
-			key.addEventListener("click", () => {
-				if (k === "⌫") entered = entered.slice(0, -1);
-				else if (k === "OK") return submit();
-				else if (entered.length < 8) entered += k;
-				render();
-			});
-			keys.appendChild(key);
-		});
-		const cancel = document.createElement("button");
-		cancel.type = "button";
-		cancel.className = "smarthome-pin-cancel";
-		cancel.textContent = "Cancel";
-		cancel.addEventListener("click", () => this.closePin());
-		dialog.querySelector(".smarthome-pin-card").appendChild(cancel);
-
-		dialog.onKey = (event) => {
-			if (/^[0-9]$/.test(event.key) && entered.length < 8) entered += event.key;
-			else if (event.key === "Backspace") entered = entered.slice(0, -1);
-			else if (event.key === "Enter") return submit();
-			else if (event.key === "Escape") return this.closePin();
-			render();
-		};
-		dialog.showError = (msg) => { dialog.querySelector(".smarthome-pin-error").textContent = msg; entered = ""; render(); };
-		render();
-		document.body.appendChild(dialog);
-		this.pinDialog = dialog;
-	},
-
-	closePin () {
-		if (this.pinDialog) { this.pinDialog.remove(); this.pinDialog = null; }
+		const apps = this.visibleApps();
+		if (!apps.length || this.hidden) return;
+		switch (event.key) {
+			case "ArrowRight": this.select(this.selected + 1); break;
+			case "ArrowLeft": this.select(this.selected - 1); break;
+			case "ArrowUp": this.sendNotification("SH_FOCUS_COG"); break;
+			case "Enter": if (document.activeElement === document.body || !document.activeElement) this.activate(apps[this.selected]); else return; break;
+			default: return;
+		}
+		event.preventDefault();
 	},
 
 	/* ---------- opening apps ---------- */
 
-	openApp (app, tile) {
-		if (tile) {
-			tile.classList.add("launching");
-			setTimeout(() => tile.classList.remove("launching"), 1500);
-		}
+	openApp (app) {
 		const webviewAvailable = typeof document.createElement("webview").getWebContentsId === "function";
 		if (this.config.mode === "external" || !webviewAvailable) {
-			if (this.config.mode !== "external") Log.warn(`${this.name}: <webview> not available, falling back to external browser`);
 			this.sendSocketNotification("SMARTHOME_OPEN_APP", { name: app.name, url: app.url, browser: this.config.browser, kiosk: this.config.kiosk });
 			return;
 		}
@@ -368,19 +219,27 @@ Module.register("MMM-SmartHomeApps", {
 		back.addEventListener("click", () => this.closeEmbedded());
 		overlay.appendChild(back);
 
-		view.addEventListener("did-finish-load", () => loading.remove());
+		view.addEventListener("did-finish-load", () => { loading.remove(); view.focus(); });
 		view.addEventListener("did-fail-load", (event) => {
 			if (event.errorCode === -3) return;
 			loading.textContent = `Couldn't load ${app.name} (${event.errorDescription || event.errorCode})`;
 		});
 		view.addEventListener("enter-html-full-screen", () => overlay.classList.add("video-fullscreen"));
 		view.addEventListener("leave-html-full-screen", () => overlay.classList.remove("video-fullscreen"));
+
+		// Keys pressed inside the guest never reach us, so the guest reports
+		// Back/Home via console.log, and handles play/pause for the remote.
 		view.addEventListener("dom-ready", () => {
 			view.executeJavaScript(`
 				if (!window.__smarthomeHook) {
 					window.__smarthomeHook = true;
 					document.addEventListener("keydown", (e) => {
-						if (e.key === "Escape" && !document.fullscreenElement) console.log("__SMARTHOME_BACK__");
+						if ((e.key === "Escape" || e.key === "BrowserBack") && !document.fullscreenElement) console.log("__SMARTHOME_BACK__");
+						if (e.key === "BrowserHome" || e.key === "Home") console.log("__SMARTHOME_BACK__");
+						if (e.key === "MediaPlayPause" || e.key === "MediaPlay" || e.key === "MediaPause") {
+							const v = document.querySelector("video");
+							if (v) { v.paused ? v.play() : v.pause(); e.preventDefault(); }
+						}
 					}, true);
 				}
 			`).catch(() => {});
@@ -399,6 +258,7 @@ Module.register("MMM-SmartHomeApps", {
 		reveal();
 
 		document.body.appendChild(overlay);
+		document.body.classList.add("sh-overlay-open");
 		this.overlay = overlay;
 		this.sendNotification("SMARTHOME_APP_OPENED", { name: app.name });
 	},
@@ -407,48 +267,8 @@ Module.register("MMM-SmartHomeApps", {
 		if (!this.overlay) return;
 		this.overlay.remove();
 		this.overlay = null;
+		document.body.classList.remove("sh-overlay-open");
+		if (document.activeElement) document.activeElement.blur();
 		this.sendNotification("SMARTHOME_APP_CLOSED");
-	},
-
-	onHostKey (event) {
-		if (this.pinDialog) {
-			event.preventDefault();
-			this.pinDialog.onKey(event);
-			return;
-		}
-		if (this.overlay && (event.key === "Escape" || event.key === "Backspace")) {
-			event.preventDefault();
-			this.closeEmbedded();
-		}
-	},
-
-	/* ---------- socket results ---------- */
-
-	socketNotificationReceived (notification, payload) {
-		switch (notification) {
-			case "SMARTHOME_STATE":
-				this.state = payload || { overrides: {}, customApps: [] };
-				this.updateDom(0);
-				break;
-			case "SMARTHOME_PIN_RESULT":
-				if (!this.pinDialog) return;
-				if (!payload.ok) {
-					this.pinDialog.showError("Wrong PIN");
-					return;
-				}
-				this.closePin();
-				if (payload.purpose === "admin") this.enterAdmin(this.pendingPin);
-				else if (payload.purpose === "open" && payload.app) this.openApp(payload.app);
-				break;
-			case "SMARTHOME_WEATHER_RESULT":
-				this.status = payload.message;
-				this.updateDom(0);
-				break;
-			case "SMARTHOME_OPEN_APP_RESULT":
-				this.status = payload.ok ? null : `Couldn't open ${payload.name}: ${payload.error}`;
-				this.updateDom(0);
-				if (payload.ok) setTimeout(() => { this.status = null; this.updateDom(0); }, 5000);
-				break;
-		}
 	}
 });

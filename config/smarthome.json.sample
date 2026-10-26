@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "adminPin": "1234",
+  "general": { "language": "en", "locale": "en-US", "timeFormat": 12, "units": "imperial" },
+  "weather": { "label": "Tacoma, WA", "lat": 47.25288, "lon": -122.44429 },
+  "apps": [
+    { "name": "Netflix", "url": "https://www.netflix.com/browse", "color": "#e50914", "hidden": false, "locked": false },
+    { "name": "Disney+", "url": "https://www.disneyplus.com/home", "color": "#0f3fa3", "hidden": false, "locked": false }
+  ]
+}
