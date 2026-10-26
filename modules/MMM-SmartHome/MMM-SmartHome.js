@@ -169,14 +169,14 @@ Module.register("MMM-SmartHome", {
 
 		if (layout.topbar) {
 			const row = document.createElement("div");
-			row.className = "sh-row sh-row-topbar";
+			row.className = "sh-grid-row sh-grid-topbar";
 			row.appendChild(slot("topbar", 0, 1, "topbar"));
 			this.grid.appendChild(row);
 		}
 		for (const sec of layout.sections || []) {
 			if (!sec.enabled) continue;
 			const row = document.createElement("div");
-			row.className = "sh-row";
+			row.className = "sh-grid-row";
 			row.dataset.sec = sec.id;
 			row.style.flex = `${sec.size || 1} 1 0`;
 			const parts = this.SPLITS[sec.split] || [1];
@@ -185,7 +185,7 @@ Module.register("MMM-SmartHome", {
 		}
 		if (layout.bottombar && layout.bottombar.enabled) {
 			const row = document.createElement("div");
-			row.className = "sh-row sh-row-bottom";
+			row.className = "sh-grid-row sh-grid-bottom";
 			row.appendChild(slot("bottombar", 0, 1, layout.bottombar.slots[0]));
 			this.grid.appendChild(row);
 		}
