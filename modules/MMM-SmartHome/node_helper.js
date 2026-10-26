@@ -27,6 +27,7 @@ module.exports = NodeHelper.create({
 	publicState () {
 		const data = this.load();
 		const { adminPin, ...rest } = data;
+		rest.hero = { ...rest.hero, tmdbApiKey: rest.hero && rest.hero.tmdbApiKey ? "set" : "" };
 		return { ...rest, positions: POSITIONS };
 	},
 
@@ -73,9 +74,16 @@ module.exports = NodeHelper.create({
 			return;
 		}
 		const data = this.load();
-		const allowed = ["apps", "modules", "weather", "general"];
+		const allowed = ["apps", "modules", "weather", "general", "hero"];
 		for (const key of Object.keys(patch || {})) {
-			if (allowed.includes(key)) data[key] = patch[key];
+			if (!allowed.includes(key)) continue;
+			if (key === "hero") {
+				const hero = { ...data.hero, ...patch.hero };
+				if (!patch.hero.tmdbApiKey) hero.tmdbApiKey = data.hero.tmdbApiKey; // keep existing key unless a new one is given
+				data.hero = hero;
+			} else {
+				data[key] = patch[key];
+			}
 		}
 		try {
 			this.save(data);

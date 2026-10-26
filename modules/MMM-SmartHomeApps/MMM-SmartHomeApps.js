@@ -46,6 +46,8 @@ Module.register("MMM-SmartHomeApps", {
 			this.openApp(app);
 		} else if (notification === "SH_FOCUS_RAIL") {
 			this.updateDom(0);
+		} else if (notification === "SH_OPEN_URL" && payload && payload.url) {
+			this.openApp({ name: payload.title ? `${payload.title} on ${payload.name}` : payload.name, url: payload.url });
 		}
 	},
 
@@ -172,7 +174,7 @@ Module.register("MMM-SmartHomeApps", {
 		switch (event.key) {
 			case "ArrowRight": this.select(this.selected + 1); break;
 			case "ArrowLeft": this.select(this.selected - 1); break;
-			case "ArrowUp": this.sendNotification("SH_FOCUS_COG"); break;
+			case "ArrowUp": this.sendNotification("SH_FOCUS_UP"); break;
 			case "Enter": if (document.activeElement === document.body || !document.activeElement) this.activate(apps[this.selected]); else return; break;
 			default: return;
 		}

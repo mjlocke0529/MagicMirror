@@ -44,6 +44,13 @@ Module.register("MMM-SmartHome", {
 		} else if (notification === "SH_FOCUS_COG") {
 			this.showCog();
 			this.cog.focus();
+		} else if (notification === "SH_FOCUS_UP") {
+			// from the rail: hero if it's on screen, else the cog
+			if (this.moduleVisible("hero")) this.sendNotification("SH_FOCUS_HERO");
+			else { this.showCog(); this.cog.focus(); }
+		} else if (notification === "SH_FOCUS_DOWN") {
+			if (this.moduleVisible("hero")) this.sendNotification("SH_FOCUS_HERO");
+			else this.sendNotification("SH_FOCUS_RAIL");
 		} else if (notification === "SH_OPEN_SETTINGS") {
 			this.openSettings();
 		}
@@ -191,7 +198,7 @@ Module.register("MMM-SmartHome", {
 			<div class="sh-panel-body"></div>`;
 		panel.querySelector(".sh-panel-close").addEventListener("click", () => this.closePanel());
 		const nav = panel.querySelector(".sh-panel-nav");
-		[["apps", "Apps"], ["layout", "Layout"], ["weather", "Weather"], ["system", "System"]].forEach(([id, label]) => {
+		[["apps", "Apps"], ["layout", "Layout"], ["hero", "Hero"], ["weather", "Weather"], ["system", "System"]].forEach(([id, label]) => {
 			const b = document.createElement("button");
 			b.type = "button";
 			b.className = "sh-nav sh-focusable";
@@ -223,7 +230,7 @@ Module.register("MMM-SmartHome", {
 		this.panel.querySelectorAll(".sh-nav").forEach((b) => b.classList.toggle("active", b.dataset.section === this.section));
 		const body = this.panel.querySelector(".sh-panel-body");
 		body.innerHTML = "";
-		const builders = { apps: this.sectionApps, layout: this.sectionLayout, weather: this.sectionWeather, system: this.sectionSystem };
+		const builders = { apps: this.sectionApps, layout: this.sectionLayout, hero: this.sectionHero, weather: this.sectionWeather, system: this.sectionSystem };
 		builders[this.section].call(this, body);
 		const first = body.querySelector(".sh-focusable");
 		if (first && !(document.activeElement && this.panel.querySelector(".sh-panel-nav").contains(document.activeElement))) first.focus();
@@ -356,6 +363,28 @@ Module.register("MMM-SmartHome", {
 		});
 	},
 
+	sectionHero (body) {
+		const hero = { ...this.state.hero };
+		body.appendChild(this.note("Trending titles come from TMDB (themoviedb.org). Services follow the apps in your rail."));
+		body.appendChild(this.row("TMDB API key", this.note(hero.tmdbApiKey ? "Set ✓" : "Not set")));
+		const key = this.input("Paste TMDB API key (v3)", "password");
+		const saveKey = this.button("Save key", () => {
+			if (!key.value.trim()) return;
+			this.save({ hero: { tmdbApiKey: key.value.trim() } }, true);
+			key.value = "";
+		});
+		const form = document.createElement("div");
+		form.className = "sh-form";
+		form.append(key, saveKey);
+		body.appendChild(form);
+
+		const typeOptions = [{ value: "movie,tv", label: "Movies & series" }, { value: "movie", label: "Movies only" }, { value: "tv", label: "Series only" }];
+		body.appendChild(this.row("Show", this.cycler(typeOptions, (hero.types || []).join(","), (v) => this.save({ hero: { types: v.split(",") } }, true))));
+		const speeds = [{ value: 6000, label: "Every 6 s" }, { value: 10000, label: "Every 10 s" }, { value: 15000, label: "Every 15 s" }, { value: 30000, label: "Every 30 s" }];
+		body.appendChild(this.row("Slide", this.cycler(speeds, hero.interval, (v) => this.save({ hero: { interval: v } }, true))));
+		body.appendChild(this.note("Changes here restart the mirror."));
+	},
+
 	sectionWeather (body) {
 		body.appendChild(this.row("Current location", this.note(this.state.weather.label || `${this.state.weather.lat}, ${this.state.weather.lon}`)));
 		const city = this.input("City, State (e.g. Gig Harbor, WA)");
@@ -393,6 +422,11 @@ Module.register("MMM-SmartHome", {
 	},
 
 	/* ---------- live layout changes ---------- */
+
+	moduleVisible (id) {
+		const m = this.findModule(id);
+		return !!m && !m.hidden;
+	},
 
 	findModule (id) {
 		return MM.getModules().find((m) => (m.data.classes || "").split(" ").includes(`sh-${id}`));
@@ -449,7 +483,7 @@ Module.register("MMM-SmartHome", {
 		// nothing of ours open: let the cog be reachable from the remote
 		if (this.cog && document.activeElement === this.cog) {
 			if (event.key === "Enter") { this.openSettings(); event.preventDefault(); }
-			else if (event.key === "ArrowDown" || event.key === "Escape" || event.key === "BrowserBack") { this.cog.blur(); this.sendNotification("SH_FOCUS_RAIL"); event.preventDefault(); }
+			else if (event.key === "ArrowDown" || event.key === "Escape" || event.key === "BrowserBack") { this.cog.blur(); this.sendNotification("SH_FOCUS_DOWN"); event.preventDefault(); }
 			event.stopPropagation();
 		}
 	},

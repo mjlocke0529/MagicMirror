@@ -13,11 +13,13 @@ const DEFAULTS = {
 	adminPin: "1234",
 	general: { language: "en", locale: "en-US", timeFormat: 12, units: "imperial" },
 	weather: { label: "Gig Harbor, WA", lat: 47.3295, lon: -122.5801 },
+	hero: { tmdbApiKey: "", types: ["movie", "tv"], interval: 10000, region: "US" },
 	apps: [
 		{ name: "Netflix", url: "https://www.netflix.com/browse", color: "#e50914", hidden: false, locked: false },
 		{ name: "Disney+", url: "https://www.disneyplus.com/home", color: "#0f3fa3", hidden: false, locked: false }
 	],
 	modules: [
+		{ id: "hero", name: "Trending (hero)", module: "MMM-SmartHomeHero", position: "upper_third", enabled: true },
 		{ id: "apps", name: "Apps", module: "MMM-SmartHomeApps", position: "middle_center", enabled: true },
 		{ id: "clock", name: "Clock", module: "clock", position: "top_left", enabled: true },
 		{
@@ -54,8 +56,11 @@ const loadSmartHome = (jsonPath) => {
 	const merged = { ...clone(DEFAULTS), ...data };
 	merged.general = { ...DEFAULTS.general, ...(data.general || {}) };
 	merged.weather = { ...DEFAULTS.weather, ...(data.weather || {}) };
+	merged.hero = { ...DEFAULTS.hero, ...(data.hero || {}) };
 	if (!Array.isArray(merged.modules) || merged.modules.length === 0) merged.modules = clone(DEFAULTS.modules);
-	if (!merged.modules.some((m) => m.id === "apps")) merged.modules.unshift(clone(DEFAULTS.modules[0]));
+	for (const def of DEFAULTS.modules) {
+		if (!merged.modules.some((m) => m.id === def.id)) merged.modules.push(clone(def));
+	}
 	return merged;
 };
 
@@ -81,6 +86,9 @@ const buildConfig = (sh) => {
 		}
 		if (entry.module === "MMM-SmartHomeApps") {
 			config.apps = clone(sh.apps);
+		}
+		if (entry.module === "MMM-SmartHomeHero") {
+			Object.assign(config, clone(sh.hero), { apps: clone(sh.apps) });
 		}
 		modules.push({
 			module: entry.module,

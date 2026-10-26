@@ -87,3 +87,4 @@ tests/**/.tmp/
 !/config/config.js
 !/config/smarthome.json.sample
 !/modules/MMM-SmartHome/
+!/modules/MMM-SmartHomeHero/

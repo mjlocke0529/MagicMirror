@@ -1,0 +1,112 @@
+.sh-hero {
+	position: relative;
+	width: 100%;
+	height: 38vh;
+	min-height: 260px;
+	border-radius: 22px;
+	overflow: hidden;
+	text-align: left;
+	color: #fff;
+	background: #111;
+	box-shadow: 0 16px 50px rgba(0, 0, 0, 0.55);
+	border: 3px solid transparent;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+	cursor: pointer;
+}
+
+.sh-hero.focused {
+	border-color: #fff;
+	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4), 0 16px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(255, 255, 255, 0.2);
+}
+
+.sh-hero.empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 120px;
+	min-height: 0;
+	cursor: default;
+}
+
+.sh-hero-bg {
+	position: absolute;
+	inset: 0;
+	background-size: cover;
+	background-position: center 20%;
+	animation: sh-hero-in 0.9s ease both, sh-hero-drift 12s ease-in-out infinite alternate;
+}
+
+@keyframes sh-hero-in { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: scale(1); } }
+@keyframes sh-hero-drift { from { transform: scale(1); } to { transform: scale(1.06); } }
+
+.sh-hero-shade {
+	position: absolute;
+	inset: 0;
+	background:
+		linear-gradient(90deg, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.6) 38%, rgba(0, 0, 0, 0.05) 70%),
+		linear-gradient(0deg, rgba(0, 0, 0, 0.7) 0%, transparent 45%);
+}
+
+.sh-hero-meta {
+	position: absolute;
+	left: 44px;
+	right: 40%;
+	bottom: 40px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.sh-hero-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.sh-hero-chip {
+	font-size: 14px;
+	letter-spacing: 0.4px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.14);
+	border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.sh-hero-chip.service-netflix { background: #e50914; border-color: #e50914; }
+.sh-hero-chip.service-disneyplus { background: #0f3fa3; border-color: #0f3fa3; }
+.sh-hero-chip.service-prime { background: #00a8e1; border-color: #00a8e1; color: #000; }
+.sh-hero-chip.service-hulu { background: #1ce783; border-color: #1ce783; color: #000; }
+.sh-hero-chip.service-max { background: #002be7; border-color: #002be7; }
+.sh-hero-chip.service-appletv { background: #fff; border-color: #fff; color: #000; }
+
+.sh-hero-title {
+	font-size: 46px;
+	font-weight: 600;
+	line-height: 1.05;
+	text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+}
+
+.sh-hero-overview {
+	font-size: 17px;
+	line-height: 1.4;
+	color: rgba(255, 255, 255, 0.85);
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.sh-hero-hint { font-size: 14px; color: rgba(255, 255, 255, 0.6); min-height: 18px; }
+
+.sh-hero-dots {
+	position: absolute;
+	right: 24px;
+	bottom: 18px;
+	display: flex;
+	gap: 6px;
+}
+
+.sh-hero-dots span {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.35);
+}
+
+.sh-hero-dots span.on { background: #fff; width: 20px; border-radius: 4px; }
