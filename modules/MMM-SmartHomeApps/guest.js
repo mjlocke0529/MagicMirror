@@ -26,13 +26,38 @@
 		if (cs.visibility === "hidden" || cs.display === "none" || parseFloat(cs.opacity) === 0) return false;
 		return r.bottom > -200 && r.top < innerHeight + 200 && r.right > 0 && r.left < innerWidth;
 	};
-	const candidates = () => [...document.querySelectorAll(SEL)].filter((el) => el !== current && !el.disabled && !el.closest("[aria-hidden='true']") && visible(el));
 	const center = (r) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+
+	// Topmost modal / dialog, if one is open: navigation stays inside it.
+	const DIALOG = "[role=dialog], [aria-modal='true'], .previewModal--container, .focus-trap-wrapper, [class*='Modal--'], [class*='modal-container'], [data-testid*='modal']";
+	const scope = () => {
+		const dialogs = [...document.querySelectorAll(DIALOG)].filter((d) => {
+			const r = d.getBoundingClientRect();
+			return visible(d) && r.width * r.height > innerWidth * innerHeight * 0.15;
+		});
+		return dialogs.length ? dialogs[dialogs.length - 1] : null;
+	};
+	// Is the element actually on top at its center (not under an overlay)?
+	const onTop = (el, r) => {
+		const c = center(r);
+		if (c.x < 0 || c.y < 0 || c.x > innerWidth || c.y > innerHeight) return true; // off-screen: can't test, allow
+		const hit = document.elementFromPoint(c.x, c.y);
+		return !!hit && (hit === el || el.contains(hit) || hit.contains(el));
+	};
+	const candidates = () => {
+		const root = scope() || document;
+		return [...root.querySelectorAll(SEL)].filter((el) => {
+			if (el === current || el.disabled || el.closest("[aria-hidden='true']") || !visible(el)) return false;
+			return onTop(el, el.getBoundingClientRect());
+		});
+	};
+	let lastRect = null;
 
 	const setFocus = (el) => {
 		if (current && current !== el) current.classList.remove("__sh-focus");
 		current = el;
 		if (!el) return;
+		lastRect = el.getBoundingClientRect();
 		el.classList.add("__sh-focus");
 		try { el.focus({ preventScroll: true }); } catch (_) { /* ignore */ }
 		el.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
@@ -46,9 +71,13 @@
 	const move = (dir) => {
 		const list = candidates();
 		if (!list.length) return false;
-		if (!current || !document.contains(current) || !visible(current)) {
-			// start from the element nearest the top-left of the viewport
-			list.sort((a, b) => { const ra = a.getBoundingClientRect(); const rb = b.getBoundingClientRect(); return (ra.top + ra.left * 0.2) - (rb.top + rb.left * 0.2); });
+		if (!current || !document.contains(current) || !visible(current) || !onTop(current, current.getBoundingClientRect())) {
+			// (re)start: nearest to where the highlight last was, else top-left of the viewport
+			const ref = lastRect ? center(lastRect) : { x: 0, y: 0 };
+			list.sort((a, b) => {
+				const ca = center(a.getBoundingClientRect()); const cb = center(b.getBoundingClientRect());
+				return Math.hypot(ca.x - ref.x, ca.y - ref.y) - Math.hypot(cb.x - ref.x, cb.y - ref.y);
+			});
 			setFocus(list.find((el) => el.getBoundingClientRect().top >= 0) || list[0]);
 			return true;
 		}
@@ -139,6 +168,23 @@
 			}
 		}
 	}, true);
+
+	// when a modal opens, move the highlight inside it; when it closes, re-pick on the next arrow
+	let lastScope = null;
+	const checkScope = () => {
+		const sc = scope();
+		if (sc === lastScope) return;
+		lastScope = sc;
+		if (!sc) { if (current) { current.classList.remove("__sh-focus"); current = null; } return; }
+		setTimeout(() => {
+			const inside = candidates().filter((el) => sc.contains(el));
+			if (!inside.length) return;
+			const play = inside.find((el) => /play|resume|watch/i.test(el.getAttribute("aria-label") || el.textContent || "") && el.getBoundingClientRect().top >= 0);
+			setFocus(play || inside[0]);
+			dbg(`dialog opened, ${inside.length} controls, focusing ${(play || inside[0]).tagName}`);
+		}, 350);
+	};
+	new MutationObserver(() => { clearTimeout(checkScope.t); checkScope.t = setTimeout(checkScope, 120); }).observe(document.documentElement, { childList: true, subtree: true });
 
 	// clear our highlight when the user clicks with a real mouse
 	document.addEventListener("mousedown", (e) => { if (e.isTrusted && current) { current.classList.remove("__sh-focus"); current = null; } }, true);
