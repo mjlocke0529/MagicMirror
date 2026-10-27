@@ -14,6 +14,8 @@
 	const style = document.createElement("style");
 	style.textContent = `.__sh-focus{outline:4px solid #fff !important;outline-offset:3px !important;border-radius:6px;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 24px rgba(255,255,255,.5) !important;transition:none !important}`;
 	(document.head || document.documentElement).appendChild(style);
+	const dbg = (msg) => console.log(`__SMARTHOME_LOG__ ${msg}`);
+	dbg(`ready on ${location.hostname}${location.pathname}`);
 
 	let current = null;
 
@@ -92,6 +94,7 @@
 	document.addEventListener("keydown", (e) => {
 		const typing = e.target && (/^(INPUT|TEXTAREA)$/.test(e.target.tagName) || e.target.isContentEditable);
 		const a = actionFor(e);
+		dbg(`key=${e.key} code=${e.code} action=${a || "none"} candidates=${candidates().length} current=${current ? current.tagName : "-"}`);
 		if (!a) return;
 
 		if (a === "home") { console.log("__SMARTHOME_BACK__"); e.preventDefault(); e.stopPropagation(); return; }

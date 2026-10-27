@@ -252,9 +252,13 @@ Module.register("MMM-SmartHomeApps", {
 		// it reports back/home/settings to us via console.log.
 		view.addEventListener("dom-ready", () => {
 			const map = JSON.stringify(window.SHRemote ? window.SHRemote.current() : {});
-			this.guestScript().then((src) => view.executeJavaScript(`const MAP = ${map};\n${src}`)).catch((error) => Log.warn(`${this.name}: guest script failed: ${error}`));
+			this.guestScript()
+				.then((src) => view.executeJavaScript(`const MAP = ${map};\n${src}`))
+				.then(() => this.sendSocketNotification("SMARTHOME_GUEST_LOG", `injected guest.js into ${app.url}`))
+				.catch((error) => this.sendSocketNotification("SMARTHOME_GUEST_LOG", `guest script FAILED: ${error}`));
 		});
 		view.addEventListener("console-message", (event) => {
+			if (typeof event.message === "string" && event.message.startsWith("__SMARTHOME_LOG__")) this.sendSocketNotification("SMARTHOME_GUEST_LOG", event.message.slice(18));
 			if (event.message === "__SMARTHOME_BACK__") this.closeEmbedded();
 			if (event.message === "__SMARTHOME_SETTINGS__") { this.closeEmbedded(); this.sendNotification("SH_OPEN_SETTINGS"); }
 		});

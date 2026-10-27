@@ -8,6 +8,7 @@ const Log = require("logger");
 module.exports = NodeHelper.create({
 	socketNotificationReceived (notification, payload) {
 		if (notification === "SMARTHOME_OPEN_APP") this.openApp(payload);
+		if (notification === "SMARTHOME_GUEST_LOG") Log.log(`[guest] ${payload}`);
 	},
 
 	openApp ({ name, url, browser, kiosk }) {
