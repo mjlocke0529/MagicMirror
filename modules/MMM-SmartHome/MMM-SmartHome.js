@@ -7,6 +7,29 @@
  * Cog (top right) -> settings panel. Remote / keyboard: arrows move, Enter
  * selects, Esc/Back closes.
  */
+/* Shared remote-control mapping. Other SmartHome modules call SHRemote.actionFor(event). */
+window.SHRemote = {
+	defaults: {
+		back: ["Escape", "BrowserBack", "Backspace", "GoBack"],
+		home: ["Home", "BrowserHome"],
+		settings: ["ContextMenu", "F1", "BrowserSearch", "Menu", "LaunchApplication1"],
+		select: ["Enter"],
+		up: ["ArrowUp"], down: ["ArrowDown"], left: ["ArrowLeft"], right: ["ArrowRight"],
+		playpause: ["MediaPlayPause", "MediaPlay", "MediaPause"]
+	},
+	map: null,
+	current () { return this.map || this.defaults; },
+	actionFor (event) {
+		for (const [action, keys] of Object.entries(this.current())) {
+			if (keys.includes(event.key) || keys.includes(event.code)) return action;
+		}
+		return null;
+	},
+	// key identity for learning: prefer event.key, fall back to code for odd remotes
+	keyOf (event) { return event.key && event.key !== "Unidentified" && event.key !== "Dead" ? event.key : event.code; },
+	ACTIONS: [["back", "Back / exit app"], ["home", "Home (dashboard)"], ["settings", "Settings / menu"], ["select", "Select"], ["up", "Up"], ["down", "Down"], ["left", "Left"], ["right", "Right"], ["playpause", "Play / pause"]]
+};
+
 Module.register("MMM-SmartHome", {
 	defaults: {
 		adminPin: "1234",
